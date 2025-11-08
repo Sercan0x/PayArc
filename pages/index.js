@@ -1,14 +1,14 @@
 import { useEffect, useState } from "react";
 import { ethers } from "ethers";
 
-const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
-const ARC_RPC = process.env.NEXT_PUBLIC_ARC_RPC;
+const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS; 
+const ARC_RPC = process.env.NEXT_PUBLIC_ARC_RPC; 
 const USDC_ADDRESS = "0x3600000000000000000000000000000000000000"; // Arc testnet USDC
 
 const CONTRACT_ABI = [
   "function owner() view returns (address)",
   "function createInvoice(string id, uint256 amount)",
-  "function getInvoice(string id) view returns (uint256 amount, address issuer, bool paid)",
+  "function getInvoice(string id) view returns (uint256 amount, address issuer, bool paid, address payer, uint256 paidAt)",
   "function payInvoice(string id)",
   "function withdraw()"
 ];
@@ -48,7 +48,8 @@ export default function Home() {
     const provider = new ethers.BrowserProvider(window.ethereum);
     await provider.send("eth_requestAccounts", []);
     const signer = await provider.getSigner();
-    setConnectedAddress(await signer.getAddress());
+    const signerAddress = await signer.getAddress();
+    setConnectedAddress(signerAddress);
   }
 
   const isOwner = connectedAddress && ownerAddress && connectedAddress.toLowerCase() === ownerAddress.toLowerCase();
@@ -62,7 +63,7 @@ export default function Home() {
       const signer = await provider.getSigner();
       const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
 
-      const amountUSDC = ethers.parseUnits(amountToCreate, 6); // USDC = 6 decimals
+      const amountUSDC = ethers.parseUnits(amountToCreate, 6);
       const tx = await contract.createInvoice(invoiceId, amountUSDC);
       await tx.wait();
       alert("Invoice created");
@@ -88,8 +89,8 @@ export default function Home() {
         amount: res[0],
         issuer: res[1],
         paid: res[2],
-        payer: "-",
-        paidAt: "-"
+        payer: res[3],
+        paidAt: res[4]
       });
     } catch (err) {
       console.error(err);
@@ -108,23 +109,23 @@ export default function Home() {
       const provider = new ethers.BrowserProvider(window.ethereum);
       await provider.send("eth_requestAccounts", []);
       const signer = await provider.getSigner();
+      const signerAddress = await signer.getAddress();
 
       const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
       const usdc = new ethers.Contract(USDC_ADDRESS, ERC20_ABI, signer);
 
       const invoice = await contract.getInvoice(queryId);
-      const amount = invoice[0];
+      const amount = invoice.amount;
 
-      // Approve if allowance < amount
-      const signerAddress = await signer.getAddress();
       const allowance = await usdc.allowance(signerAddress, contract.address);
       if (allowance < amount) {
-        const approveTx = await usdc.approve(CONTRACT_ADDRESS, amount);
+        const approveTx = await usdc.approve(contract.address, amount);
         await approveTx.wait();
       }
 
       const tx = await contract.payInvoice(queryId);
       await tx.wait();
+
       alert("Invoice paid!");
       queryInvoice();
     } catch (err) {
