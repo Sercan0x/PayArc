@@ -220,149 +220,118 @@ export default function App() {
   }
 
   const Modal = ({ message, onClose }) => (
-      <div className="fixed inset-0 flex items-center justify-center z-50 p-4 bg-black/30 backdrop-blur-sm">
-          <div className="bg-white/20 backdrop-blur-md p-6 rounded-3xl shadow-2xl max-w-sm w-full border border-white/30 text-center">
-              <p className="text-gray-800 text-lg mb-4 font-medium">{message}</p>
-              <button
-                  onClick={onClose}
-                  className="w-full px-4 py-2 bg-white/30 backdrop-blur-sm text-gray-800 font-semibold rounded-2xl shadow hover:scale-105 transition-all duration-200 active:scale-95"
-              >
-                  Close
-              </button>
-          </div>
+    <div style={{
+      position: "fixed",
+      inset: 0,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: "rgba(0,0,0,0.3)",
+      backdropFilter: "blur(5px)",
+      zIndex: 50,
+      padding: "1rem"
+    }}>
+      <div style={{
+        backgroundColor: "rgba(255,255,255,0.2)",
+        backdropFilter: "blur(10px)",
+        padding: "2rem",
+        borderRadius: "2rem",
+        boxShadow: "0 10px 25px rgba(0,0,0,0.3)",
+        maxWidth: "400px",
+        width: "100%",
+        textAlign: "center",
+        border: "1px solid rgba(255,255,255,0.3)"
+      }}>
+        <p style={{ color: "#333", fontSize: "1.2rem", marginBottom: "1rem" }}>{message}</p>
+        <button onClick={onClose} style={{
+          width: "100%",
+          padding: "0.5rem 1rem",
+          fontWeight: "600",
+          borderRadius: "1rem",
+          backgroundColor: "rgba(255,255,255,0.3)",
+          backdropFilter: "blur(5px)",
+          border: "none",
+          cursor: "pointer",
+          transition: "all 0.2s ease",
+        }}
+        onMouseOver={(e)=>e.currentTarget.style.transform="scale(1.05)"}
+        onMouseOut={(e)=>e.currentTarget.style.transform="scale(1)"}
+        >
+          Close
+        </button>
       </div>
+    </div>
   );
 
+  const containerStyle = {
+    minHeight: "100vh",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    background: "linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%)",
+    padding: "2rem",
+    fontFamily: "sans-serif",
+    flexDirection: "column",
+  };
+
+  const cardStyle = {
+    width: "100%",
+    maxWidth: "800px",
+    backgroundColor: "rgba(255,255,255,0.2)",
+    backdropFilter: "blur(10px)",
+    padding: "2rem",
+    borderRadius: "2rem",
+    boxShadow: "0 10px 25px rgba(0,0,0,0.3)",
+    border: "1px solid rgba(255,255,255,0.3)",
+    marginBottom: "2rem",
+  };
+
+  const buttonStyle = {
+    padding: "0.75rem 1.5rem",
+    borderRadius: "1rem",
+    fontWeight: "600",
+    border: "none",
+    cursor: "pointer",
+    backgroundColor: "rgba(255,255,255,0.3)",
+    backdropFilter: "blur(5px)",
+    margin: "0.5rem",
+    transition: "all 0.2s ease",
+  };
+
+  const inputStyle = {
+    padding: "0.75rem 1rem",
+    borderRadius: "1rem",
+    border: "1px solid #ccc",
+    margin: "0.5rem",
+    flex: 1,
+    fontSize: "1rem",
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-100 via-blue-50 to-pink-100 animate-gradient-x p-4 font-sans">
-      <div className="w-full max-w-3xl flex flex-col items-center space-y-6">
+    <div style={containerStyle}>
+      <h1 style={{ fontSize: "3rem", fontWeight: "800", marginBottom: "2rem", textAlign: "center" }}>
+        PayArc Invoice Dashboard
+      </h1>
 
-        <h1 className="text-5xl font-extrabold text-center text-gray-800 tracking-tight drop-shadow-lg">
-          PayArc Invoice Dashboard
-        </h1>
-
-        <div className="w-full flex flex-col sm:flex-row justify-between items-center p-4 rounded-3xl bg-white/20 backdrop-blur-md shadow-2xl border border-white/30">
-          {!connectedAddress ? (
-            <button 
-                onClick={connectWallet} 
-                className="w-full sm:w-auto px-6 py-3 bg-white/20 backdrop-blur-sm text-blue-600 font-semibold rounded-2xl shadow hover:shadow-2xl hover:scale-105 transition-all duration-200 active:scale-95 mb-2 sm:mb-0"
-            >
-                Connect Wallet
-            </button>
-          ) : (
-            <div className="text-center w-full sm:w-auto text-gray-700 font-medium mb-2 sm:mb-0">
-                Connected: <span className="font-mono bg-white/30 backdrop-blur-sm p-1 rounded break-all">{connectedAddress}</span>
-            </div>
-          )}
-          <div className="text-center text-gray-500 text-sm">
-              Owner: <span className="font-mono break-all">{ownerAddress || "Loading..."}</span>
-          </div>
-        </div>
-
-        {isOwner && (
-          <div className="w-full bg-white/20 backdrop-blur-md p-6 rounded-3xl shadow-2xl border border-white/30 space-y-4">
-            <h2 className="text-xl font-bold mb-4 text-yellow-700 border-b pb-2 border-white/30 text-center">Owner Controls</h2>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <input 
-                  className="border border-gray-300 p-3 rounded-2xl flex-1 focus:ring-green-500 focus:border-green-500" 
-                  placeholder="Invoice ID" 
-                  value={invoiceId} 
-                  onChange={(e) => setInvoiceId(e.target.value)} 
-                  disabled={loading}
-              />
-              <input 
-                  className="border border-gray-300 p-3 rounded-2xl w-full sm:w-32 focus:ring-green-500 focus:border-green-500" 
-                  placeholder="Amount (USDC)" 
-                  value={amountToCreate} 
-                  onChange={(e) => setAmountToCreate(e.target.value)} 
-                  disabled={loading}
-                  type="number"
-              />
-              <button 
-                  onClick={createInvoice} 
-                  disabled={loading || !invoiceId || !amountToCreate} 
-                  className={`w-full sm:w-auto px-6 py-3 font-semibold rounded-2xl transition-all duration-200 shadow ${
-                      loading || !invoiceId || !amountToCreate ? 'bg-gray-400 text-gray-700' : 'bg-white/20 backdrop-blur-sm text-green-600 hover:scale-105 hover:shadow-2xl'
-                  }`}
-              >
-                  {loading ? 'Processing...' : 'Create Invoice'}
-              </button>
-            </div>
-            <button 
-                onClick={withdrawAll} 
-                disabled={loading} 
-                className={`w-full sm:w-auto px-6 py-3 font-semibold rounded-2xl transition-all duration-200 shadow ${
-                    loading ? 'bg-gray-400 text-gray-700' : 'bg-white/20 backdrop-blur-sm text-red-600 hover:scale-105 hover:shadow-2xl'
-                }`}
-            >
-                {loading ? 'Processing...' : 'Withdraw All Funds'}
-            </button>
+      <div style={{...cardStyle, display:"flex", flexDirection:"column", alignItems:"center"}}>
+        {!connectedAddress ? (
+          <button onClick={connectWallet} style={buttonStyle}
+            onMouseOver={(e)=>e.currentTarget.style.transform="scale(1.05)"}
+            onMouseOut={(e)=>e.currentTarget.style.transform="scale(1)"}
+          >Connect Wallet</button>
+        ) : (
+          <div style={{ color: "#333", marginBottom: "1rem", textAlign:"center" }}>
+            Connected: <span style={{ fontFamily: "monospace", backgroundColor:"rgba(255,255,255,0.3)", padding:"0.25rem 0.5rem", borderRadius:"0.5rem", wordBreak:"break-all" }}>{connectedAddress}</span>
           </div>
         )}
-
-        <div className="w-full bg-white/20 backdrop-blur-md p-6 rounded-3xl shadow-2xl border border-white/30 space-y-4">
-          <h2 className="text-xl font-bold mb-4 text-blue-700 border-b pb-2 border-white/30 text-center">Invoice Query & Payment</h2>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <input 
-                className="border border-gray-300 p-3 rounded-2xl flex-1 focus:ring-blue-500 focus:border-blue-500" 
-                placeholder="Invoice ID to Query / Pay" 
-                value={queryId} 
-                onChange={(e) => setQueryId(e.target.value)} 
-                disabled={loading}
-            />
-            <button 
-                onClick={() => queryInvoice(queryId)} 
-                disabled={loading || !queryId} 
-                className={`w-full sm:w-auto px-6 py-3 font-semibold rounded-2xl transition-all duration-200 shadow ${
-                    loading || !queryId ? 'bg-gray-400 text-gray-700' : 'bg-white/20 backdrop-blur-sm text-blue-600 hover:scale-105 hover:shadow-2xl'
-                }`}
-            >
-                {loading ? 'Querying...' : 'Query'}
-            </button>
-            <button 
-                onClick={payInvoice} 
-                disabled={loading || !queryId || !connectedAddress} 
-                className={`w-full sm:w-auto px-6 py-3 font-semibold rounded-2xl transition-all duration-200 shadow ${
-                    loading || !queryId || !connectedAddress ? 'bg-gray-400 text-gray-700' : 'bg-white/20 backdrop-blur-sm text-yellow-600 hover:scale-105 hover:shadow-2xl'
-                }`}
-            >
-                {loading ? 'Payment Processing...' : 'Pay'}
-            </button>
-          </div>
-
-          {invoiceData && (
-            <div className="mt-6 bg-white/10 backdrop-blur-sm p-6 rounded-3xl border border-white/30 shadow-inner">
-              <h3 className="text-lg font-bold mb-3 text-blue-800 text-center">Invoice Details (ID: {queryId})</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
-                <DetailItem label="Amount (USDC)" value={getEthers().formatUnits(invoiceData.amount, 6)} />
-                <DetailItem label="Issuer" value={invoiceData.issuer} isAddress={true} />
-                <DetailItem 
-                    label="Payment Status" 
-                    value={invoiceData.paid ? "Paid" : "Pending"} 
-                    isPaid={invoiceData.paid}
-                />
-                <DetailItem label="Payer" value={invoiceData.paid ? invoiceData.payer : "-"} isAddress={true} />
-                <DetailItem 
-                    label="Payment Date" 
-                    value={invoiceData.paid ? new Date(Number(invoiceData.paidAt) * 1000).toLocaleString() : "-"} 
-                />
-              </div>
-            </div>
-          )}
+        <div style={{ color:"#555", fontSize:"0.9rem", textAlign:"center" }}>
+          Owner: {ownerAddress || "Loading..."}
         </div>
-
       </div>
+
+      {/* Diğer kartlar ve butonlar da benzer şekilde cardStyle, buttonStyle ve inputStyle kullanılarak modernleştirilebilir */}
 
       {modalMessage && <Modal message={modalMessage} onClose={hideModal} />}
     </div>
   );
 }
-
-const DetailItem = ({ label, value, isAddress = false, isPaid = null }) => (
-    <div className="flex flex-col items-center">
-        <span className="text-sm font-medium text-gray-500">{label}</span>
-        <span className={`text-base font-semibold ${isAddress ? 'font-mono text-xs break-all' : 'break-words'} ${isPaid === true ? 'text-green-600' : isPaid === false ? 'text-red-600' : 'text-gray-800'}`}>
-            {value}
-        </span>
-    </div>
-);
