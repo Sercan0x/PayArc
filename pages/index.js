@@ -8,7 +8,7 @@ const USDC_ADDRESS = "0x3600000000000000000000000000000000000000"; // Arc testne
 const CONTRACT_ABI = [
   "function owner() view returns (address)",
   "function createInvoice(string id, uint256 amount)",
-  "function getInvoice(string id) view returns (uint256 amount, address issuer, bool paid, address payer, uint256 paidAt)",
+  "function getInvoice(string id) view returns (uint256 amount, address issuer, bool paid)",
   "function payInvoice(string id)",
   "function withdraw()"
 ];
