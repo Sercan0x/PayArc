@@ -1,5 +1,16 @@
 import { useEffect, useState, useCallback } from "react";
 
+// Lucide Icons yüklemesi için betik.
+// Bu betik, bileşen içinde kullanılabilen 'Icon' fonksiyonunu sağlar.
+const loadIcons = () => {
+  if (!document.getElementById('lucide-script')) {
+    const script = document.createElement('script');
+    script.src = "https://cdn.jsdelivr.net/npm/lucide@latest";
+    script.id = 'lucide-script';
+    document.head.appendChild(script);
+  }
+};
+
 const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
 const ARC_RPC = process.env.NEXT_PUBLIC_ARC_RPC;
 const USDC_ADDRESS = "0x3600000000000000000000000000000000000000"; 
@@ -33,6 +44,20 @@ const getEthers = () => {
   return null;
 };
 
+// Lucide Icons kullanımı için yardımcı bileşen
+const Icon = ({ name, className }) => {
+    const [IconComponent, setIconComponent] = useState(null);
+    useEffect(() => {
+        // Lucide kütüphanesi yüklendikten sonra ikon bileşenini dinamik olarak yükle
+        if (window.lucide && window.lucide.icons[name]) {
+            setIconComponent(() => window.lucide.icons[name]);
+        }
+    }, [name]);
+
+    if (!IconComponent) return null;
+    return <IconComponent className={className} />;
+};
+
 
 export default function App() {
   const [connectedAddress, setConnectedAddress] = useState(null);
@@ -45,6 +70,7 @@ export default function App() {
   const { modalMessage, showModal, hideModal } = useModal();
 
   useEffect(() => {
+    loadIcons();
     if (!document.getElementById('ethers-script')) {
       const script = document.createElement('script');
       script.src = "https://cdn.jsdelivr.net/npm/ethers@6.11.1/dist/ethers.umd.min.js";
@@ -72,7 +98,7 @@ export default function App() {
 
   async function connectWallet() {
     const ethers = getEthers();
-    if (!ethers || !window.ethereum) return showModal("MetaMask required.");
+    if (!ethers || !window.ethereum) return showModal("MetaMask gerekli.");
     try {
         const provider = new ethers.BrowserProvider(window.ethereum);
         await provider.send("eth_requestAccounts", []);
@@ -81,7 +107,7 @@ export default function App() {
         setConnectedAddress(signerAddress);
     } catch (error) {
         console.error("Connection error:", error);
-        showModal("Failed to connect wallet.");
+        showModal("Cüzdan bağlantısı başarısız oldu.");
     }
   }
 
@@ -98,7 +124,7 @@ export default function App() {
 
       if (res.issuer === '0x0000000000000000000000000000000000000000') {
           setInvoiceData(null);
-          showModal("Invoice not found.");
+          showModal("Fatura bulunamadı.");
           return;
       }
 
@@ -112,7 +138,7 @@ export default function App() {
       setQueryId(idToQuery); 
     } catch (err) {
       console.error(err);
-      showModal("Error querying invoice: " + (err?.message || String(err)));
+      showModal("Fatura sorgulanırken hata: " + (err?.message || String(err)));
     } finally {
       setLoading(false);
     }
@@ -120,7 +146,7 @@ export default function App() {
 
   async function createInvoice() {
     const ethers = getEthers();
-    if (!ethers || !invoiceId || !amountToCreate) return showModal("Please provide ID and amount.");
+    if (!ethers || !invoiceId || !amountToCreate) return showModal("Lütfen ID ve miktarı girin.");
     setLoading(true);
     try {
       const provider = new ethers.BrowserProvider(window.ethereum);
@@ -131,14 +157,14 @@ export default function App() {
       const amountUSDC = ethers.parseUnits(amountToCreate, 6); 
       
       const tx = await contract.createInvoice(invoiceId, amountUSDC);
-      showModal("Creating Invoice...");
+      showModal("Fatura Oluşturuluyor...");
       await tx.wait();
-      showModal("Invoice created successfully!");
+      showModal("Fatura başarıyla oluşturuldu!");
       setInvoiceId("");
       setAmountToCreate("");
     } catch (err) {
       console.error(err);
-      showModal("Error creating invoice: " + (err?.message || String(err)));
+      showModal("Fatura oluşturulurken hata: " + (err?.message || String(err)));
     } finally {
       setLoading(false);
     }
@@ -146,8 +172,8 @@ export default function App() {
 
   async function payInvoice() {
     const ethers = getEthers();
-    if (!ethers || !queryId) return showModal("Please provide invoice ID.");
-    if (!connectedAddress) return showModal("Please connect your wallet first.");
+    if (!ethers || !queryId) return showModal("Lütfen fatura ID'sini girin.");
+    if (!connectedAddress) return showModal("Lütfen önce cüzdanınızı bağlayın.");
     setLoading(true);
 
     try {
@@ -165,35 +191,35 @@ export default function App() {
       const amount = invoice.amount; 
 
       if (invoice.issuer === '0x0000000000000000000000000000000000000000') {
-          showModal("Invoice not found.");
+          showModal("Fatura bulunamadı.");
           return;
       }
 
       if (invoice.paid) {
-          showModal("Invoice is already paid.");
+          showModal("Fatura zaten ödendi.");
           return;
       }
       
-      showModal(`Checking allowance for ${ethers.formatUnits(amount, 6)} USDC...`);
+      showModal(`${ethers.formatUnits(amount, 6)} USDC için izin kontrol ediliyor...`);
 
       const allowance = await usdc.allowance(signerAddress, contractTarget);
       
       if (allowance < amount) {
-        showModal("Approving USDC. Please confirm transaction 1/2 in MetaMask.");
+        showModal("USDC Onaylanıyor. Lütfen MetaMask'te 1/2. işlemi onaylayın.");
         const approveTx = await usdc.approve(contractTarget, amount);
         await approveTx.wait();
-        showModal("USDC approved. Proceeding to payment (Transaction 2/2)...");
+        showModal("USDC onaylandı. Ödemeye geçiliyor (2/2. İşlem)...");
       }
 
       const tx = await contract.payInvoice(queryId); 
-      showModal("Paying invoice. Please confirm transaction 2/2 in MetaMask.");
+      showModal("Fatura ödeniyor. Lütfen MetaMask'te 2/2. işlemi onaylayın.");
       await tx.wait();
       
-      showModal("Invoice paid successfully!");
+      showModal("Fatura başarıyla ödendi!");
       queryInvoice(queryId); 
     } catch (err) {
       console.error("payInvoice error:", err);
-      showModal("Error paying invoice: " + (err.shortMessage || err.message || String(err)));
+      showModal("Fatura ödenirken hata: " + (err.shortMessage || err.message || String(err)));
     } finally {
       setLoading(false);
     }
@@ -201,79 +227,94 @@ export default function App() {
 
   async function withdrawAll() {
     const ethers = getEthers();
-    if (!ethers || !window.ethereum) return showModal("MetaMask required.");
+    if (!ethers || !window.ethereum) return showModal("MetaMask gerekli.");
     setLoading(true);
     try {
       const provider = new ethers.BrowserProvider(window.ethereum);
       await provider.send("eth_requestAccounts", []);
       const signer = await provider.getSigner();
       const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
-      showModal("Withdrawing funds...");
+      showModal("Fonlar çekiliyor...");
       const tx = await contract.withdraw();
       await tx.wait();
-      showModal("Funds withdrawn successfully!");
+      showModal("Fonlar başarıyla çekildi!");
     } catch (err) {
       console.error(err);
-      showModal("Error withdrawing funds: " + (err?.message || String(err)));
+      showModal("Fonlar çekilirken hata: " + (err?.message || String(err)));
     } finally {
       setLoading(false);
     }
   }
 
   const Modal = ({ message, onClose }) => (
-      <div className="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-50 p-4">
-          <div className="bg-white p-6 rounded-xl shadow-2xl max-w-sm w-full border-t-4 border-blue-600">
-              <p className="text-gray-800 text-lg mb-4 font-medium">{message}</p>
+      <div className="fixed inset-0 bg-gray-900 bg-opacity-70 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+          <div className="bg-gray-800 p-8 rounded-2xl shadow-2xl max-w-sm w-full border border-indigo-500/50 transform transition-all duration-300 scale-100">
+              <h3 className="text-xl font-bold text-white mb-4 flex items-center">
+                <Icon name="alert-triangle" className="w-5 h-5 text-indigo-400 mr-2" />
+                İşlem Durumu
+              </h3>
+              <p className="text-gray-300 text-lg mb-6 font-medium">{message}</p>
               <button
                   onClick={onClose}
-                  className="w-full px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition duration-150 shadow-md"
+                  className="w-full px-4 py-3 bg-indigo-600 text-white font-semibold rounded-xl hover:bg-indigo-700 transition duration-150 shadow-lg shadow-indigo-500/30"
               >
-                  Close
+                  Kapat
               </button>
           </div>
       </div>
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 sm:p-6 font-sans">
+    <div className="min-h-screen bg-gray-900 p-4 sm:p-8 font-sans">
         
-      <div className="max-w-3xl mx-auto">
-        <h1 className="text-3xl font-extrabold mb-8 text-center text-gray-800 tracking-tight">
-            PayArc Invoice Registration System
+      <div className="max-w-4xl mx-auto">
+        <h1 className="text-4xl sm:text-5xl font-extrabold mb-10 text-center tracking-tight">
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-pink-400">
+                PayArc 
+            </span> 
+            Fatura Kayıt Sistemi
         </h1>
         
-        <div className="bg-white p-4 rounded-xl shadow-lg mb-6 flex flex-col sm:flex-row justify-between items-center border border-gray-200">
+        {/* Cüzdan Bağlantısı / Genel Bilgi Kartı */}
+        <div className="bg-gray-800 p-5 rounded-2xl shadow-xl shadow-gray-950/50 mb-8 flex flex-col sm:flex-row justify-between items-center border border-gray-700">
           {!connectedAddress ? (
             <button 
                 onClick={connectWallet} 
-                className="w-full sm:w-auto px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-lg hover:bg-blue-700 transition duration-150 active:scale-95 transform"
+                className="w-full sm:w-auto px-6 py-3 bg-indigo-600 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/30 hover:bg-indigo-700 transition duration-200 active:scale-95 transform flex items-center justify-center"
             >
-                Connect Wallet
+                <Icon name="wallet" className="w-5 h-5 mr-2" />
+                Cüzdanı Bağla
             </button>
           ) : (
-            <div className="text-gray-700 font-medium w-full sm:w-auto mb-2 sm:mb-0">
-                Connected: <span className="text-sm font-mono bg-gray-100 p-1 rounded break-all">{connectedAddress}</span>
+            <div className="text-gray-300 font-medium w-full sm:w-auto mb-2 sm:mb-0 flex items-center">
+                <Icon name="plug-zap" className="w-5 h-5 text-green-500 mr-2" />
+                Bağlı Adres: <span className="text-sm font-mono bg-gray-700 p-2 ml-2 rounded-lg break-all text-indigo-300">{connectedAddress}</span>
             </div>
           )}
-          <div className="text-gray-500 text-sm mt-2 sm:mt-0">
-              Owner: <span className="font-mono break-all">{ownerAddress || "Loading..."}</span>
+          <div className="text-gray-500 text-sm mt-3 sm:mt-0 flex items-center">
+              <Icon name="lock" className="w-4 h-4 mr-1" />
+              Contract Owner: <span className="font-mono break-all ml-1 text-gray-400">{ownerAddress || "Yükleniyor..."}</span>
           </div>
         </div>
 
+        {/* Sahibin İşlemleri Kartı */}
         {isOwner && (
-          <div className="bg-white p-6 rounded-xl shadow-lg mb-6 border border-yellow-400/50">
-            <h2 className="text-xl font-bold mb-4 text-yellow-700 border-b pb-2 border-yellow-100">Contract Owner Operations</h2>
-            <div className="flex flex-col sm:flex-row gap-3 mb-4">
+          <div className="bg-gray-800 p-6 rounded-2xl shadow-xl shadow-gray-950/50 mb-8 border border-yellow-500/40">
+            <h2 className="text-2xl font-bold mb-4 text-yellow-500 border-b pb-2 border-gray-700 flex items-center">
+                <Icon name="crown" className="w-6 h-6 mr-2" />
+                Sözleşme Sahibi İşlemleri
+            </h2>
+            <div className="flex flex-col md:flex-row gap-4 mb-4">
               <input 
-                  className="border border-gray-300 p-3 rounded-lg flex-1 focus:ring-green-500 focus:border-green-500" 
-                  placeholder="Invoice ID" 
+                  className="border border-gray-600 p-3 bg-gray-700 text-white rounded-xl flex-1 focus:ring-green-500 focus:border-green-500 transition" 
+                  placeholder="Fatura ID'si (Yeni)" 
                   value={invoiceId} 
                   onChange={(e) => setInvoiceId(e.target.value)} 
                   disabled={loading}
               />
               <input 
-                  className="border border-gray-300 p-3 rounded-lg w-full sm:w-32 focus:ring-green-500 focus:border-green-500" 
-                  placeholder="Amount (USDC)" 
+                  className="border border-gray-600 p-3 bg-gray-700 text-white rounded-xl w-full md:w-36 focus:ring-green-500 focus:border-green-500 transition" 
+                  placeholder="Miktar (USDC)" 
                   value={amountToCreate} 
                   onChange={(e) => setAmountToCreate(e.target.value)} 
                   disabled={loading}
@@ -282,31 +323,37 @@ export default function App() {
               <button 
                   onClick={createInvoice} 
                   disabled={loading || !invoiceId || !amountToCreate} 
-                  className={`w-full sm:w-auto px-6 py-3 font-semibold rounded-lg transition duration-150 shadow-md ${
-                      loading || !invoiceId || !amountToCreate ? 'bg-gray-400 text-gray-700' : 'bg-green-600 text-white hover:bg-green-700'
+                  className={`w-full md:w-auto px-6 py-3 font-bold rounded-xl transition duration-150 shadow-md flex items-center justify-center ${
+                      loading || !invoiceId || !amountToCreate ? 'bg-gray-600 text-gray-400 cursor-not-allowed' : 'bg-green-600 text-white hover:bg-green-700 shadow-green-600/30'
                   }`}
               >
-                  {loading ? 'Processing...' : 'Create Invoice'}
+                  <Icon name="plus" className="w-5 h-5 mr-2" />
+                  {loading ? 'Oluşturuluyor...' : 'Fatura Oluştur'}
               </button>
             </div>
             <button 
                 onClick={withdrawAll} 
                 disabled={loading} 
-                className={`w-full sm:w-auto px-6 py-3 font-semibold rounded-lg transition duration-150 shadow-md ${
-                    loading ? 'bg-gray-400 text-gray-700' : 'bg-red-600 text-white hover:bg-red-700'
+                className={`w-full px-6 py-3 font-bold rounded-xl transition duration-150 shadow-md mt-2 flex items-center justify-center ${
+                    loading ? 'bg-gray-600 text-gray-400 cursor-not-allowed' : 'bg-red-600 text-white hover:bg-red-700 shadow-red-600/30'
                 }`}
             >
-                {loading ? 'Processing...' : 'Withdraw All Funds (Owner)'}
+                <Icon name="banknote" className="w-5 h-5 mr-2" />
+                {loading ? 'İşleniyor...' : 'Tüm Fonları Çek (Owner)'}
             </button>
           </div>
         )}
 
-        <div className="bg-white p-6 rounded-xl shadow-lg border border-blue-400/50">
-          <h2 className="text-xl font-bold mb-4 text-blue-700 border-b pb-2 border-blue-100">Invoice Query & Payment</h2>
-          <div className="flex flex-col sm:flex-row gap-3 mb-6">
+        {/* Fatura Sorgulama ve Ödeme Kartı */}
+        <div className="bg-gray-800 p-6 rounded-2xl shadow-xl shadow-gray-950/50 border border-indigo-500/40">
+          <h2 className="text-2xl font-bold mb-4 text-indigo-400 border-b pb-2 border-gray-700 flex items-center">
+            <Icon name="search" className="w-6 h-6 mr-2" />
+            Fatura Sorgulama & Ödeme
+          </h2>
+          <div className="flex flex-col sm:flex-row gap-4 mb-6">
             <input 
-                className="border border-gray-300 p-3 rounded-lg flex-1 focus:ring-blue-500 focus:border-blue-500" 
-                placeholder="Invoice ID to Query / Pay" 
+                className="border border-gray-600 p-3 bg-gray-700 text-white rounded-xl flex-1 focus:ring-indigo-500 focus:border-indigo-500 transition" 
+                placeholder="Sorgulanacak / Ödenecek Fatura ID'si" 
                 value={queryId} 
                 onChange={(e) => setQueryId(e.target.value)} 
                 disabled={loading}
@@ -314,38 +361,45 @@ export default function App() {
             <button 
                 onClick={() => queryInvoice(queryId)} 
                 disabled={loading || !queryId} 
-                className={`w-full sm:w-auto px-6 py-3 font-semibold rounded-lg transition duration-150 shadow-md ${
-                    loading || !queryId ? 'bg-gray-400 text-gray-700' : 'bg-blue-600 text-white hover:bg-blue-700'
+                className={`w-full sm:w-auto px-6 py-3 font-bold rounded-xl transition duration-150 shadow-md flex items-center justify-center ${
+                    loading || !queryId ? 'bg-gray-600 text-gray-400 cursor-not-allowed' : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-600/30'
                 }`}
             >
-                {loading ? 'Querying...' : 'Query'}
+                <Icon name="eye" className="w-5 h-5 mr-2" />
+                {loading ? 'Sorgulanıyor...' : 'Sorgula'}
             </button>
             <button 
                 onClick={payInvoice} 
                 disabled={loading || !queryId || !connectedAddress} 
-                className={`w-full sm:w-auto px-6 py-3 font-semibold rounded-lg transition duration-150 shadow-md ${
-                    loading || !queryId || !connectedAddress ? 'bg-gray-400 text-gray-700' : 'bg-yellow-600 text-white hover:bg-yellow-700'
+                className={`w-full sm:w-auto px-6 py-3 font-bold rounded-xl transition duration-150 shadow-md flex items-center justify-center ${
+                    loading || !queryId || !connectedAddress ? 'bg-gray-600 text-gray-400 cursor-not-allowed' : 'bg-yellow-500 text-gray-900 hover:bg-yellow-600 shadow-yellow-500/30'
                 }`}
             >
-                {loading ? 'Payment Processing...' : 'Pay'}
+                <Icon name="credit-card" className="w-5 h-5 mr-2" />
+                {loading ? 'Ödeme İşleniyor...' : 'Öde'}
             </button>
           </div>
 
           {invoiceData && (
-            <div className="mt-6 bg-blue-50 p-6 rounded-xl border border-blue-200 shadow-inner">
-              <h3 className="text-lg font-bold mb-3 text-blue-800">Invoice Details (ID: {queryId})</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
-                <DetailItem label="Amount (USDC)" value={getEthers().formatUnits(invoiceData.amount, 6)} />
-                <DetailItem label="Issuer" value={invoiceData.issuer} isAddress={true} />
+            <div className="mt-8 bg-gray-700 p-6 rounded-xl border border-indigo-500/30 shadow-inner">
+              <h3 className="text-xl font-bold mb-4 text-white flex items-center">
+                  <Icon name="file-text" className="w-5 h-5 mr-2 text-indigo-300" />
+                  Fatura Detayları (ID: {queryId})
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-gray-300">
+                <DetailItem label="Miktar (USDC)" value={getEthers().formatUnits(invoiceData.amount, 6)} icon="dollar-sign" />
+                <DetailItem label="Düzenleyen" value={invoiceData.issuer} isAddress={true} icon="user" />
                 <DetailItem 
-                    label="Payment Status" 
-                    value={invoiceData.paid ? "Paid" : "Pending"} 
+                    label="Ödeme Durumu" 
+                    value={invoiceData.paid ? "Ödendi" : "Bekliyor"} 
                     isPaid={invoiceData.paid}
+                    icon="check-circle"
                 />
-                <DetailItem label="Payer" value={invoiceData.paid ? invoiceData.payer : "-"} isAddress={true} />
+                <DetailItem label="Ödeyen" value={invoiceData.paid ? invoiceData.payer : "-"} isAddress={true} icon="send" />
                 <DetailItem 
-                    label="Payment Date" 
+                    label="Ödeme Tarihi" 
                     value={invoiceData.paid ? new Date(Number(invoiceData.paidAt) * 1000).toLocaleString() : "-"} 
+                    icon="calendar"
                 />
               </div>
             </div>
@@ -359,11 +413,23 @@ export default function App() {
   );
 }
 
-const DetailItem = ({ label, value, isAddress = false, isPaid = null }) => (
-    <div className="flex flex-col">
-        <span className="text-sm font-medium text-gray-500">{label}</span>
-        <span className={`text-base font-semibold ${isAddress ? 'font-mono text-xs' : 'break-words'} ${isPaid === true ? 'text-green-600' : isPaid === false ? 'text-red-600' : 'text-gray-800'}`}>
-            {value}
-        </span>
-    </div>
-);
+const DetailItem = ({ label, value, isAddress = false, isPaid = null, icon }) => {
+    let statusIcon = null;
+    let statusIconColor = "text-gray-400";
+    if (isPaid !== null) {
+        statusIcon = isPaid ? "check-circle" : "alert-triangle";
+        statusIconColor = isPaid ? "text-green-500" : "text-red-500";
+    }
+
+    return (
+        <div className="flex flex-col bg-gray-700 p-3 rounded-lg border border-gray-600">
+            <span className="text-xs font-medium text-gray-400 mb-1 flex items-center">
+                <Icon name={statusIcon || icon} className={`w-3 h-3 mr-1 ${statusIconColor}`} />
+                {label}: 
+            </span> 
+            <span className={`text-sm font-semibold break-words ${isAddress ? 'font-mono text-sm text-indigo-300' : 'text-white'} ${isPaid === true ? 'text-green-400' : isPaid === false ? 'text-red-400' : ''}`}>
+                {value}
+            </span>
+        </div>
+    );
+};
