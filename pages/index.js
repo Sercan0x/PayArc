@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { ethers } from "ethers";
 
-const CONTRACT_ADDRESS = 0x5356eC996950f361791d8c6354C7dafd5dE62863;
+const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
 const ARC_RPC = process.env.NEXT_PUBLIC_ARC_RPC;
 const USDC_ADDRESS = "0x3600000000000000000000000000000000000000"; // Arc testnet USDC
 
