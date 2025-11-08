@@ -62,7 +62,7 @@ export default function App() {
       const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
       const res = await contract.getInvoice(queryId);
       setInvoiceData({
-        amount: res[0],
+        amount (USDC): res[0],
         issuer: res[1],
         paid: res[2],
         payer: res[3],
