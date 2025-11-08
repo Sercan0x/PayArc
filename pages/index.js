@@ -391,7 +391,7 @@ export default function App() {
                 <DetailItem label="Issuer" value={invoiceData.issuer} isAddress={true} icon="user" />
                 <DetailItem 
                     label="Payment Status" 
-                    value={invoiceData.paid ? "Paid" : "Pending"} 
+                    value={invoiceData.paid ? "Paid" : "Not Paid"} 
                     isPaid={invoiceData.paid}
                     icon="check-circle"
                 />
