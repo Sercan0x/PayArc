@@ -116,7 +116,8 @@ export default function Home() {
       const amount = invoice[0];
 
       // Approve if allowance < amount
-      const allowance = await usdc.allowance(connectedAddress, CONTRACT_ADDRESS);
+      const signerAddress = await signer.getAddress();
+      const allowance = await usdc.allowance(signerAddress, contract.address);
       if (allowance < amount) {
         const approveTx = await usdc.approve(CONTRACT_ADDRESS, amount);
         await approveTx.wait();
