@@ -1,15 +1,22 @@
 import { useEffect, useState } from "react";
 import { ethers } from "ethers";
 
-const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
-const ARC_RPC = process.env.NEXT_PUBLIC_ARC_RPC;
+const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS; 
+const ARC_RPC = process.env.NEXT_PUBLIC_ARC_RPC; 
+const USDC_ADDRESS = "0x3600000000000000000000000000000000000000"; // Arc testnet USDC
 
-const ABI = [
+const CONTRACT_ABI = [
   "function owner() view returns (address)",
-  "function createInvoice(string id, uint256 amountWei)",
-  "function getInvoice(string id) view returns (uint256 amountWei, address issuer, bool paid, address payer, uint256 paidAt)",
-  "function payInvoice(string id) payable",
+  "function createInvoice(string id, uint256 amount)",
+  "function getInvoice(string id) view returns (uint256 amount, address issuer, bool paid, address payer, uint256 paidAt)",
+  "function payInvoice(string id)",
   "function withdraw()"
+];
+
+const ERC20_ABI = [
+  "function balanceOf(address) view returns (uint256)",
+  "function approve(address spender, uint256 amount) returns (bool)",
+  "function allowance(address owner, address spender) view returns (uint256)"
 ];
 
 export default function Home() {
@@ -18,21 +25,22 @@ export default function Home() {
   const [invoiceId, setInvoiceId] = useState("");
   const [queryId, setQueryId] = useState("");
   const [invoiceData, setInvoiceData] = useState(null);
-  const [amountToCreate, setAmountToCreate] = useState(""); // in ETH for convenience
+  const [amountToCreate, setAmountToCreate] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     async function loadOwner() {
+      if (!CONTRACT_ADDRESS || !ARC_RPC) return;
       try {
         const provider = new ethers.JsonRpcProvider(ARC_RPC);
-        const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, provider);
+        const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
         const owner = await contract.owner();
         setOwnerAddress(owner);
       } catch (err) {
         console.error("loadOwner error", err);
       }
     }
-    if (CONTRACT_ADDRESS && ARC_RPC) loadOwner();
+    loadOwner();
   }, []);
 
   async function connectWallet() {
@@ -40,22 +48,23 @@ export default function Home() {
     const provider = new ethers.BrowserProvider(window.ethereum);
     await provider.send("eth_requestAccounts", []);
     const signer = await provider.getSigner();
-    const addr = await signer.getAddress();
-    setConnectedAddress(addr);
+    const signerAddress = await signer.getAddress();
+    setConnectedAddress(signerAddress);
   }
 
+  const isOwner = connectedAddress && ownerAddress && connectedAddress.toLowerCase() === ownerAddress.toLowerCase();
+
   async function createInvoice() {
+    if (!invoiceId || !amountToCreate) return alert("Provide id and amount");
+    setLoading(true);
     try {
-      if (!window.ethereum) return alert("MetaMask required");
-      if (!invoiceId || !amountToCreate) return alert("Provide id and amount");
-      setLoading(true);
       const provider = new ethers.BrowserProvider(window.ethereum);
       await provider.send("eth_requestAccounts", []);
       const signer = await provider.getSigner();
-      const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
+      const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
 
-      const amountWei = ethers.parseEther(amountToCreate); // user gives ETH amount
-      const tx = await contract.createInvoice(invoiceId, amountWei);
+      const amountUSDC = ethers.parseUnits(amountToCreate, 6);
+      const tx = await contract.createInvoice(invoiceId, amountUSDC);
       await tx.wait();
       alert("Invoice created");
       setInvoiceId("");
@@ -69,19 +78,19 @@ export default function Home() {
   }
 
   async function queryInvoice() {
+    if (!queryId) return alert("Provide invoice id");
+    setLoading(true);
     try {
-      if (!queryId) return alert("Provide invoice id");
-      setLoading(true);
       const provider = new ethers.JsonRpcProvider(ARC_RPC);
-      const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, provider);
+      const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
       const res = await contract.getInvoice(queryId);
-      // res: [amountWei, issuer, paid, payer, paidAt]
+
       setInvoiceData({
-        amountWei: res[0].toString(),
+        amount: res[0],
         issuer: res[1],
         paid: res[2],
         payer: res[3],
-        paidAt: res[4].toNumber ? res[4].toNumber() : Number(res[4])
+        paidAt: res[4]
       });
     } catch (err) {
       console.error(err);
@@ -91,27 +100,57 @@ export default function Home() {
     }
   }
 
+  // --- Düzeltilmiş payInvoice ---
   async function payInvoice() {
-    try {
-      if (!window.ethereum) return alert("MetaMask required");
-      if (!queryId) return alert("Provide invoice id to pay");
-      setLoading(true);
+    if (!queryId) return alert("Provide invoice id");
+    if (!window.ethereum) return alert("MetaMask required");
+    setLoading(true);
 
+    try {
       const provider = new ethers.BrowserProvider(window.ethereum);
       await provider.send("eth_requestAccounts", []);
       const signer = await provider.getSigner();
-      const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
+      const signerAddress = await signer.getAddress();
 
-      // get invoice to know amount
-      const res = await contract.getInvoice(queryId);
-      const amountWei = res[0];
-      if (amountWei === 0) return alert("Invoice not found or zero amount");
-      const tx = await contract.payInvoice(queryId, { value: amountWei });
+      console.log("Signer address:", signerAddress);
+      console.log("Contract address:", CONTRACT_ADDRESS);
+      console.log("USDC address:", USDC_ADDRESS);
+
+      if (!signerAddress || !CONTRACT_ADDRESS || !USDC_ADDRESS) {
+        throw new Error("Signer or contract address is null/undefined");
+      }
+
+      const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+      const usdc = new ethers.Contract(USDC_ADDRESS, ERC20_ABI, signer);
+
+      console.log("Contract instance address:", contract.address);
+      console.log("USDC instance address:", usdc.address);
+
+      const invoice = await contract.getInvoice(queryId);
+      const amount = invoice.amount;
+
+      console.log("Invoice amount:", amount.toString());
+
+      // Approve if allowance < amount
+      const allowance = await usdc.allowance(signerAddress, contract.address);
+      console.log("Current allowance:", allowance.toString());
+
+      if (allowance < amount) {
+        console.log("Approving USDC...");
+        const approveTx = await usdc.approve(contract.address, amount);
+        await approveTx.wait();
+        console.log("USDC approved");
+      }
+
+      console.log("Paying invoice...");
+      const tx = await contract.payInvoice(queryId);
       await tx.wait();
-      alert("Invoice paid");
+      console.log("Invoice paid");
+
+      alert("Invoice paid!");
       queryInvoice();
     } catch (err) {
-      console.error(err);
+      console.error("payInvoice error:", err);
       alert("Error: " + (err?.message || err));
     } finally {
       setLoading(false);
@@ -119,13 +158,13 @@ export default function Home() {
   }
 
   async function withdrawAll() {
+    if (!window.ethereum) return alert("MetaMask required");
+    setLoading(true);
     try {
-      if (!window.ethereum) return alert("MetaMask required");
-      setLoading(true);
       const provider = new ethers.BrowserProvider(window.ethereum);
       await provider.send("eth_requestAccounts", []);
       const signer = await provider.getSigner();
-      const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
+      const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
       const tx = await contract.withdraw();
       await tx.wait();
       alert("Withdrawn");
@@ -137,49 +176,50 @@ export default function Home() {
     }
   }
 
-  const isOwner = connectedAddress && ownerAddress && connectedAddress.toLowerCase() === ownerAddress.toLowerCase();
-
   return (
-    <div style={{ fontFamily: "sans-serif", padding: 24 }}>
-      <h1>Invoice Registry (Testnet)</h1>
+    <div className="min-h-screen bg-gray-50 p-6 font-sans">
+      <div className="max-w-3xl mx-auto">
+        <h1 className="text-3xl font-bold mb-6 text-center">Invoice Registry (Arc Testnet)</h1>
 
-      <div style={{ marginBottom: 12 }}>
-        {!connectedAddress ? (
-          <button onClick={connectWallet}>Connect Wallet</button>
-        ) : (
-          <div>Connected: {connectedAddress}</div>
-        )}
-        <div>Contract owner: {ownerAddress || "loading..."}</div>
-      </div>
-
-      {isOwner && (
-        <div style={{ border: "1px solid #ddd", padding: 12, marginBottom: 20 }}>
-          <h3>Create Invoice (owner)</h3>
-          <input placeholder="invoice id" value={invoiceId} onChange={(e) => setInvoiceId(e.target.value)} />
-          <input placeholder="amount (ETH)" value={amountToCreate} onChange={(e) => setAmountToCreate(e.target.value)} style={{ marginLeft: 8 }} />
-          <button onClick={createInvoice} disabled={loading || !invoiceId || !amountToCreate} style={{ marginLeft: 8 }}>Create</button>
-          <div style={{ marginTop: 8 }}>
-            <button onClick={withdrawAll} disabled={loading}>Withdraw contract balance (owner)</button>
-          </div>
+        <div className="mb-6 flex justify-between items-center">
+          {!connectedAddress ? (
+            <button onClick={connectWallet} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Connect Wallet</button>
+          ) : (
+            <div className="text-gray-700">Connected: {connectedAddress}</div>
+          )}
+          <div className="text-gray-500">Owner: {ownerAddress || "loading..."}</div>
         </div>
-      )}
 
-      <div style={{ border: "1px solid #ddd", padding: 12 }}>
-        <h3>Query / Pay Invoice</h3>
-        <input placeholder="invoice id" value={queryId} onChange={(e) => setQueryId(e.target.value)} />
-        <button onClick={queryInvoice} disabled={loading || !queryId} style={{ marginLeft: 8 }}>Query</button>
-        <button onClick={payInvoice} disabled={loading || !queryId} style={{ marginLeft: 8 }}>Pay</button>
-
-        {invoiceData && (
-          <div style={{ marginTop: 12, textAlign: "left" }}>
-            <div>Amount (wei): {invoiceData.amountWei}</div>
-            <div>Amount (ETH): {invoiceData.amountWei ? (Number(invoiceData.amountWei) / 1e18) : 0}</div>
-            <div>Issuer: {invoiceData.issuer}</div>
-            <div>Paid: {invoiceData.paid ? "Yes" : "No"}</div>
-            <div>Payer: {invoiceData.payer}</div>
-            <div>PaidAt (unix): {invoiceData.paidAt}</div>
+        {isOwner && (
+          <div className="bg-white p-6 rounded shadow mb-6">
+            <h2 className="text-xl font-semibold mb-4">Create Invoice</h2>
+            <div className="flex gap-2 mb-4">
+              <input className="border p-2 rounded flex-1" placeholder="Invoice ID" value={invoiceId} onChange={(e) => setInvoiceId(e.target.value)} />
+              <input className="border p-2 rounded w-32" placeholder="Amount (USDC)" value={amountToCreate} onChange={(e) => setAmountToCreate(e.target.value)} />
+              <button onClick={createInvoice} disabled={loading || !invoiceId || !amountToCreate} className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">Create</button>
+            </div>
+            <button onClick={withdrawAll} disabled={loading} className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">Withdraw All</button>
           </div>
         )}
+
+        <div className="bg-white p-6 rounded shadow">
+          <h2 className="text-xl font-semibold mb-4">Query / Pay Invoice</h2>
+          <div className="flex gap-2 mb-4">
+            <input className="border p-2 rounded flex-1" placeholder="Invoice ID" value={queryId} onChange={(e) => setQueryId(e.target.value)} />
+            <button onClick={queryInvoice} disabled={loading || !queryId} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Query</button>
+            <button onClick={payInvoice} disabled={loading || !queryId} className="px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700">Pay</button>
+          </div>
+
+          {invoiceData && (
+            <div className="mt-4 bg-gray-50 p-4 rounded border">
+              <div>Amount (USDC): {ethers.formatUnits(invoiceData.amount, 6)}</div>
+              <div>Issuer: {invoiceData.issuer}</div>
+              <div>Paid: {invoiceData.paid ? "Yes" : "No"}</div>
+              <div>Payer: {invoiceData.paid ? invoiceData.payer : "-"}</div>
+              <div>Paid At: {invoiceData.paid ? new Date(invoiceData.paidAt * 1000).toLocaleString() : "-"}</div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
