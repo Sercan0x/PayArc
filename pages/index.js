@@ -1,7 +1,8 @@
 import { useEffect, useState, useCallback } from "react";
-import { ethers } from "ethers"; 
+// Removed: import { ethers } from "ethers"; 
+// Ethers will be accessed globally via the script tag below.
 
-// Environment variables (Çevresel değişkenler)
+// Environment variables
 const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
 const ARC_RPC = process.env.NEXT_PUBLIC_ARC_RPC;
 // Arc Testnet USDC Address (6 decimals)
@@ -31,6 +32,17 @@ const useModal = () => {
   return { modalMessage, showModal, hideModal };
 };
 
+// Access the global ethers object
+const getEthers = () => {
+  // Check if ethers is available globally (window.ethers)
+  if (typeof window !== 'undefined' && window.ethers) {
+    return window.ethers;
+  }
+  console.error("Ethers library is not loaded.");
+  return null;
+};
+
+
 export default function App() {
   const [connectedAddress, setConnectedAddress] = useState(null);
   const [ownerAddress, setOwnerAddress] = useState(null);
@@ -41,10 +53,20 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const { modalMessage, showModal, hideModal } = useModal();
 
+  // Load Ethers Library using a script tag
+  useEffect(() => {
+    if (!document.getElementById('ethers-script')) {
+      const script = document.createElement('script');
+      script.src = "https://cdn.jsdelivr.net/npm/ethers@6.11.1/dist/ethers.umd.min.js";
+      script.id = 'ethers-script';
+      document.head.appendChild(script);
+    }
+  }, []);
 
   useEffect(() => {
     async function loadOwner() {
-      if (!CONTRACT_ADDRESS || !ARC_RPC) return;
+      const ethers = getEthers();
+      if (!ethers || !CONTRACT_ADDRESS || !ARC_RPC) return;
       try {
         const provider = new ethers.JsonRpcProvider(ARC_RPC);
         const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
@@ -54,11 +76,14 @@ export default function App() {
         console.error("loadOwner error", err);
       }
     }
-    loadOwner();
-  }, []);
+    // Delay loading owner until ethers is likely available
+    const timer = setTimeout(loadOwner, 500); 
+    return () => clearTimeout(timer);
+  }, [ARC_RPC, CONTRACT_ADDRESS]);
 
   async function connectWallet() {
-    if (!window.ethereum) return showModal("MetaMask required.");
+    const ethers = getEthers();
+    if (!ethers || !window.ethereum) return showModal("MetaMask required.");
     try {
         const provider = new ethers.BrowserProvider(window.ethereum);
         await provider.send("eth_requestAccounts", []);
@@ -75,7 +100,8 @@ export default function App() {
   
   // Function to query invoice details
   const queryInvoice = useCallback(async (idToQuery) => {
-    if (!idToQuery) return;
+    const ethers = getEthers();
+    if (!ethers || !idToQuery) return;
     setLoading(true);
     try {
       const provider = new ethers.JsonRpcProvider(ARC_RPC);
@@ -106,7 +132,8 @@ export default function App() {
   }, [ARC_RPC, CONTRACT_ADDRESS, showModal]);
 
   async function createInvoice() {
-    if (!invoiceId || !amountToCreate) return showModal("Provide ID and amount.");
+    const ethers = getEthers();
+    if (!ethers || !invoiceId || !amountToCreate) return showModal("Please provide ID and amount.");
     setLoading(true);
     try {
       const provider = new ethers.BrowserProvider(window.ethereum);
@@ -133,7 +160,8 @@ export default function App() {
 
   // --- Core Pay Invoice Function (Uses ERC20 Approve/TransferFrom) ---
   async function payInvoice() {
-    if (!queryId) return showModal("Provide invoice id.");
+    const ethers = getEthers();
+    if (!ethers || !queryId) return showModal("Please provide invoice ID.");
     if (!connectedAddress) return showModal("Please connect your wallet first.");
     setLoading(true);
 
@@ -196,7 +224,8 @@ export default function App() {
   }
 
   async function withdrawAll() {
-    if (!window.ethereum) return showModal("MetaMask required.");
+    const ethers = getEthers();
+    if (!ethers || !window.ethereum) return showModal("MetaMask required.");
     setLoading(true);
     try {
       const provider = new ethers.BrowserProvider(window.ethereum);
@@ -224,7 +253,7 @@ export default function App() {
                   onClick={onClose}
                   className="w-full px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition duration-150 shadow-md"
               >
-                  Kapat
+                  Close
               </button>
           </div>
       </div>
@@ -235,43 +264,43 @@ export default function App() {
         
       <div className="max-w-3xl mx-auto">
         <h1 className="text-3xl font-extrabold mb-8 text-center text-gray-800 tracking-tight">
-            PayArc Fatura Kayıt Sistemi
+            PayArc Invoice Registration System
         </h1>
         
-        {/* Bağlantı ve Durum Bölümü */}
+        {/* Connection and Status Section */}
         <div className="bg-white p-4 rounded-xl shadow-lg mb-6 flex flex-col sm:flex-row justify-between items-center border border-gray-200">
           {!connectedAddress ? (
             <button 
                 onClick={connectWallet} 
                 className="w-full sm:w-auto px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-lg hover:bg-blue-700 transition duration-150 active:scale-95 transform"
             >
-                Cüzdanı Bağla
+                Connect Wallet
             </button>
           ) : (
             <div className="text-gray-700 font-medium w-full sm:w-auto mb-2 sm:mb-0">
-                Bağlı: <span className="text-sm font-mono bg-gray-100 p-1 rounded break-all">{connectedAddress}</span>
+                Connected: <span className="text-sm font-mono bg-gray-100 p-1 rounded break-all">{connectedAddress}</span>
             </div>
           )}
           <div className="text-gray-500 text-sm mt-2 sm:mt-0">
-              Sahip: <span className="font-mono break-all">{ownerAddress || "Yükleniyor..."}</span>
+              Owner: <span className="font-mono break-all">{ownerAddress || "Loading..."}</span>
           </div>
         </div>
 
-        {/* Owner Fonksiyonları Bölümü */}
+        {/* Owner Functions Section */}
         {isOwner && (
           <div className="bg-white p-6 rounded-xl shadow-lg mb-6 border border-yellow-400/50">
-            <h2 className="text-xl font-bold mb-4 text-yellow-700 border-b pb-2 border-yellow-100">Kontrat Sahibi İşlemleri</h2>
+            <h2 className="text-xl font-bold mb-4 text-yellow-700 border-b pb-2 border-yellow-100">Contract Owner Operations</h2>
             <div className="flex flex-col sm:flex-row gap-3 mb-4">
               <input 
                   className="border border-gray-300 p-3 rounded-lg flex-1 focus:ring-green-500 focus:border-green-500" 
-                  placeholder="Fatura ID'si" 
+                  placeholder="Invoice ID" 
                   value={invoiceId} 
                   onChange={(e) => setInvoiceId(e.target.value)} 
                   disabled={loading}
               />
               <input 
                   className="border border-gray-300 p-3 rounded-lg w-full sm:w-32 focus:ring-green-500 focus:border-green-500" 
-                  placeholder="Miktar (USDC)" 
+                  placeholder="Amount (USDC)" 
                   value={amountToCreate} 
                   onChange={(e) => setAmountToCreate(e.target.value)} 
                   disabled={loading}
@@ -284,7 +313,7 @@ export default function App() {
                       loading || !invoiceId || !amountToCreate ? 'bg-gray-400 text-gray-700' : 'bg-green-600 text-white hover:bg-green-700'
                   }`}
               >
-                  {loading ? 'İşleniyor...' : 'Fatura Oluştur'}
+                  {loading ? 'Processing...' : 'Create Invoice'}
               </button>
             </div>
             <button 
@@ -294,18 +323,18 @@ export default function App() {
                     loading ? 'bg-gray-400 text-gray-700' : 'bg-red-600 text-white hover:bg-red-700'
                 }`}
             >
-                {loading ? 'İşleniyor...' : 'Tüm Fonları Çek (Owner)'}
+                {loading ? 'Processing...' : 'Withdraw All Funds (Owner)'}
             </button>
           </div>
         )}
 
-        {/* Sorgulama / Ödeme Bölümü */}
+        {/* Query / Payment Section */}
         <div className="bg-white p-6 rounded-xl shadow-lg border border-blue-400/50">
-          <h2 className="text-xl font-bold mb-4 text-blue-700 border-b pb-2 border-blue-100">Fatura Sorgulama ve Ödeme</h2>
+          <h2 className="text-xl font-bold mb-4 text-blue-700 border-b pb-2 border-blue-100">Invoice Query & Payment</h2>
           <div className="flex flex-col sm:flex-row gap-3 mb-6">
             <input 
                 className="border border-gray-300 p-3 rounded-lg flex-1 focus:ring-blue-500 focus:border-blue-500" 
-                placeholder="Sorgulanacak / Ödenecek Fatura ID'si" 
+                placeholder="Invoice ID to Query / Pay" 
                 value={queryId} 
                 onChange={(e) => setQueryId(e.target.value)} 
                 disabled={loading}
@@ -317,7 +346,7 @@ export default function App() {
                     loading || !queryId ? 'bg-gray-400 text-gray-700' : 'bg-blue-600 text-white hover:bg-blue-700'
                 }`}
             >
-                {loading ? 'Sorgulanıyor...' : 'Sorgula'}
+                {loading ? 'Querying...' : 'Query'}
             </button>
             <button 
                 onClick={payInvoice} 
@@ -326,25 +355,25 @@ export default function App() {
                     loading || !queryId || !connectedAddress ? 'bg-gray-400 text-gray-700' : 'bg-yellow-600 text-white hover:bg-yellow-700'
                 }`}
             >
-                {loading ? 'Ödeme İşleniyor...' : 'Öde'}
+                {loading ? 'Payment Processing...' : 'Pay'}
             </button>
           </div>
 
-          {/* Fatura Bilgileri Görüntüleme */}
+          {/* Invoice Information Display */}
           {invoiceData && (
             <div className="mt-6 bg-blue-50 p-6 rounded-xl border border-blue-200 shadow-inner">
-              <h3 className="text-lg font-bold mb-3 text-blue-800">Fatura Detayları (ID: {queryId})</h3>
+              <h3 className="text-lg font-bold mb-3 text-blue-800">Invoice Details (ID: {queryId})</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
-                <DetailItem label="Miktar (USDC)" value={ethers.formatUnits(invoiceData.amount, 6)} />
-                <DetailItem label="Fatura Keseni" value={invoiceData.issuer} isAddress={true} />
+                <DetailItem label="Amount (USDC)" value={getEthers().formatUnits(invoiceData.amount, 6)} />
+                <DetailItem label="Issuer" value={invoiceData.issuer} isAddress={true} />
                 <DetailItem 
-                    label="Ödeme Durumu" 
-                    value={invoiceData.paid ? "Ödendi" : "Bekliyor"} 
+                    label="Payment Status" 
+                    value={invoiceData.paid ? "Paid" : "Pending"} 
                     isPaid={invoiceData.paid}
                 />
-                <DetailItem label="Ödeyen" value={invoiceData.paid ? invoiceData.payer : "-"} isAddress={true} />
+                <DetailItem label="Payer" value={invoiceData.paid ? invoiceData.payer : "-"} isAddress={true} />
                 <DetailItem 
-                    label="Ödeme Tarihi" 
+                    label="Payment Date" 
                     value={invoiceData.paid ? new Date(Number(invoiceData.paidAt) * 1000).toLocaleString() : "-"} 
                 />
               </div>
@@ -353,7 +382,7 @@ export default function App() {
         </div>
       </div>
       
-      {/* Modal Ekranı */}
+      {/* Modal Screen */}
       {modalMessage && <Modal message={modalMessage} onClose={hideModal} />}
 
     </div>
