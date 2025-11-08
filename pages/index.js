@@ -1,14 +1,9 @@
 import { useEffect, useState, useCallback } from "react";
-// Removed: import { ethers } from "ethers"; 
-// Ethers will be accessed globally via the script tag below.
 
-// Environment variables
 const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
 const ARC_RPC = process.env.NEXT_PUBLIC_ARC_RPC;
-// Arc Testnet USDC Address (6 decimals)
 const USDC_ADDRESS = "0x3600000000000000000000000000000000000000"; 
 
-// PayArc Contract ABI
 const CONTRACT_ABI = [
   "function owner() view returns (address)",
   "function createInvoice(string id, uint256 amount)",
@@ -17,14 +12,12 @@ const CONTRACT_ABI = [
   "function withdraw()"
 ];
 
-// Basic ERC20 ABI (for Allowance and Approve)
 const ERC20_ABI = [
   "function balanceOf(address) view returns (uint256)",
   "function approve(address spender, uint256 amount) returns (bool)",
   "function allowance(address owner, address spender) view returns (uint256)"
 ];
 
-// Custom Modal Hook (to replace alert())
 const useModal = () => {
   const [modalMessage, setModalMessage] = useState(null);
   const showModal = (message) => setModalMessage(message);
@@ -32,9 +25,7 @@ const useModal = () => {
   return { modalMessage, showModal, hideModal };
 };
 
-// Access the global ethers object
 const getEthers = () => {
-  // Check if ethers is available globally (window.ethers)
   if (typeof window !== 'undefined' && window.ethers) {
     return window.ethers;
   }
@@ -53,7 +44,6 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const { modalMessage, showModal, hideModal } = useModal();
 
-  // Load Ethers Library using a script tag
   useEffect(() => {
     if (!document.getElementById('ethers-script')) {
       const script = document.createElement('script');
@@ -76,7 +66,6 @@ export default function App() {
         console.error("loadOwner error", err);
       }
     }
-    // Delay loading owner until ethers is likely available
     const timer = setTimeout(loadOwner, 500); 
     return () => clearTimeout(timer);
   }, [ARC_RPC, CONTRACT_ADDRESS]);
@@ -98,7 +87,6 @@ export default function App() {
 
   const isOwner = connectedAddress && ownerAddress && connectedAddress.toLowerCase() === ownerAddress.toLowerCase();
   
-  // Function to query invoice details
   const queryInvoice = useCallback(async (idToQuery) => {
     const ethers = getEthers();
     if (!ethers || !idToQuery) return;
@@ -108,7 +96,6 @@ export default function App() {
       const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
       const res = await contract.getInvoice(idToQuery);
 
-      // Check if invoice exists (issuer is not zero address)
       if (res.issuer === '0x0000000000000000000000000000000000000000') {
           setInvoiceData(null);
           showModal("Invoice not found.");
@@ -116,11 +103,11 @@ export default function App() {
       }
 
       setInvoiceData({
-        amount: res[0], // BigInt amount in USDC decimals (6)
+        amount: res[0], 
         issuer: res[1],
         paid: res[2],
         payer: res[3],
-        paidAt: res[4] // BigInt timestamp
+        paidAt: res[4] 
       });
       setQueryId(idToQuery); 
     } catch (err) {
@@ -141,7 +128,6 @@ export default function App() {
       const signer = await provider.getSigner();
       const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
 
-      // Parse amount as 6 decimals (USDC standard)
       const amountUSDC = ethers.parseUnits(amountToCreate, 6); 
       
       const tx = await contract.createInvoice(invoiceId, amountUSDC);
@@ -158,7 +144,6 @@ export default function App() {
     }
   }
 
-  // --- Core Pay Invoice Function (Uses ERC20 Approve/TransferFrom) ---
   async function payInvoice() {
     const ethers = getEthers();
     if (!ethers || !queryId) return showModal("Please provide invoice ID.");
@@ -171,17 +156,13 @@ export default function App() {
       const signer = await provider.getSigner();
       const signerAddress = await signer.getAddress();
 
-      // PayArc Contract instance
       const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
-      // USDC Contract instance
       const usdc = new ethers.Contract(USDC_ADDRESS, ERC20_ABI, signer);
 
-      // Ethers v6: Use .target to get the contract address
       const contractTarget = contract.target; 
       
-      // Fetch invoice amount
       const invoice = await contract.getInvoice(queryId);
-      const amount = invoice.amount; // BigInt amount in USDC decimals (6)
+      const amount = invoice.amount; 
 
       if (invoice.issuer === '0x0000000000000000000000000000000000000000') {
           showModal("Invoice not found.");
@@ -195,28 +176,23 @@ export default function App() {
       
       showModal(`Checking allowance for ${ethers.formatUnits(amount, 6)} USDC...`);
 
-      // 1. Check Allowance: How much the PayArc contract can spend on behalf of the user
       const allowance = await usdc.allowance(signerAddress, contractTarget);
       
-      // 2. Approve if necessary
       if (allowance < amount) {
         showModal("Approving USDC. Please confirm transaction 1/2 in MetaMask.");
-        // Approve the PayArc contract to spend the required amount
         const approveTx = await usdc.approve(contractTarget, amount);
         await approveTx.wait();
         showModal("USDC approved. Proceeding to payment (Transaction 2/2)...");
       }
 
-      // 3. Pay Invoice: This triggers the transferFrom logic inside the PayArc contract
       const tx = await contract.payInvoice(queryId); 
       showModal("Paying invoice. Please confirm transaction 2/2 in MetaMask.");
       await tx.wait();
       
       showModal("Invoice paid successfully!");
-      queryInvoice(queryId); // Update status
+      queryInvoice(queryId); 
     } catch (err) {
       console.error("payInvoice error:", err);
-      // Provide better error feedback
       showModal("Error paying invoice: " + (err.shortMessage || err.message || String(err)));
     } finally {
       setLoading(false);
@@ -244,7 +220,6 @@ export default function App() {
     }
   }
 
-  // Modal Component for custom alerts
   const Modal = ({ message, onClose }) => (
       <div className="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-50 p-4">
           <div className="bg-white p-6 rounded-xl shadow-2xl max-w-sm w-full border-t-4 border-blue-600">
@@ -267,7 +242,6 @@ export default function App() {
             PayArc Invoice Registration System
         </h1>
         
-        {/* Connection and Status Section */}
         <div className="bg-white p-4 rounded-xl shadow-lg mb-6 flex flex-col sm:flex-row justify-between items-center border border-gray-200">
           {!connectedAddress ? (
             <button 
@@ -286,7 +260,6 @@ export default function App() {
           </div>
         </div>
 
-        {/* Owner Functions Section */}
         {isOwner && (
           <div className="bg-white p-6 rounded-xl shadow-lg mb-6 border border-yellow-400/50">
             <h2 className="text-xl font-bold mb-4 text-yellow-700 border-b pb-2 border-yellow-100">Contract Owner Operations</h2>
@@ -328,7 +301,6 @@ export default function App() {
           </div>
         )}
 
-        {/* Query / Payment Section */}
         <div className="bg-white p-6 rounded-xl shadow-lg border border-blue-400/50">
           <h2 className="text-xl font-bold mb-4 text-blue-700 border-b pb-2 border-blue-100">Invoice Query & Payment</h2>
           <div className="flex flex-col sm:flex-row gap-3 mb-6">
@@ -359,7 +331,6 @@ export default function App() {
             </button>
           </div>
 
-          {/* Invoice Information Display */}
           {invoiceData && (
             <div className="mt-6 bg-blue-50 p-6 rounded-xl border border-blue-200 shadow-inner">
               <h3 className="text-lg font-bold mb-3 text-blue-800">Invoice Details (ID: {queryId})</h3>
@@ -382,14 +353,12 @@ export default function App() {
         </div>
       </div>
       
-      {/* Modal Screen */}
       {modalMessage && <Modal message={modalMessage} onClose={hideModal} />}
 
     </div>
   );
 }
 
-// Helper Component for Displaying Detail Items
 const DetailItem = ({ label, value, isAddress = false, isPaid = null }) => (
     <div className="flex flex-col">
         <span className="text-sm font-medium text-gray-500">{label}</span>
