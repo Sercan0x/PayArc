@@ -100,6 +100,7 @@ export default function Home() {
     }
   }
 
+  // --- Düzeltilmiş payInvoice ---
   async function payInvoice() {
     if (!queryId) return alert("Provide invoice id");
     if (!window.ethereum) return alert("MetaMask required");
@@ -111,25 +112,45 @@ export default function Home() {
       const signer = await provider.getSigner();
       const signerAddress = await signer.getAddress();
 
+      console.log("Signer address:", signerAddress);
+      console.log("Contract address:", CONTRACT_ADDRESS);
+      console.log("USDC address:", USDC_ADDRESS);
+
+      if (!signerAddress || !CONTRACT_ADDRESS || !USDC_ADDRESS) {
+        throw new Error("Signer or contract address is null/undefined");
+      }
+
       const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
       const usdc = new ethers.Contract(USDC_ADDRESS, ERC20_ABI, signer);
+
+      console.log("Contract instance address:", contract.address);
+      console.log("USDC instance address:", usdc.address);
 
       const invoice = await contract.getInvoice(queryId);
       const amount = invoice.amount;
 
+      console.log("Invoice amount:", amount.toString());
+
+      // Approve if allowance < amount
       const allowance = await usdc.allowance(signerAddress, contract.address);
+      console.log("Current allowance:", allowance.toString());
+
       if (allowance < amount) {
+        console.log("Approving USDC...");
         const approveTx = await usdc.approve(contract.address, amount);
         await approveTx.wait();
+        console.log("USDC approved");
       }
 
+      console.log("Paying invoice...");
       const tx = await contract.payInvoice(queryId);
       await tx.wait();
+      console.log("Invoice paid");
 
       alert("Invoice paid!");
       queryInvoice();
     } catch (err) {
-      console.error(err);
+      console.error("payInvoice error:", err);
       alert("Error: " + (err?.message || err));
     } finally {
       setLoading(false);
