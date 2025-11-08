@@ -88,8 +88,8 @@ export default function Home() {
         amount: res[0],
         issuer: res[1],
         paid: res[2],
-        payer: res[3],
-        paidAt: res[4].toNumber ? res[4].toNumber() : Number(res[4])
+        payer: "-",
+        paidAt: "-"
       });
     } catch (err) {
       console.error(err);
