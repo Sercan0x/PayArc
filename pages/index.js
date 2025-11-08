@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 
 const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
 const ARC_RPC = process.env.NEXT_PUBLIC_ARC_RPC;
-const USDC_ADDRESS = "0x3600000000000000000000000000000000000000"; 
+const USDC_ADDRESS = "0x3600000000000000000000000000000000000000";
 
 const CONTRACT_ABI = [
   "function owner() view returns (address)",
@@ -63,7 +63,7 @@ export default function App() {
         console.error("loadOwner error", err);
       }
     }
-    const timer = setTimeout(loadOwner, 500); 
+    const timer = setTimeout(loadOwner, 500);
     return () => clearTimeout(timer);
   }, [ARC_RPC, CONTRACT_ADDRESS]);
 
@@ -71,19 +71,19 @@ export default function App() {
     const ethers = getEthers();
     if (!ethers || !window.ethereum) return showModal("MetaMask required.");
     try {
-        const provider = new ethers.BrowserProvider(window.ethereum);
-        await provider.send("eth_requestAccounts", []);
-        const signer = await provider.getSigner();
-        const signerAddress = await signer.getAddress();
-        setConnectedAddress(signerAddress);
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      await provider.send("eth_requestAccounts", []);
+      const signer = await provider.getSigner();
+      const signerAddress = await signer.getAddress();
+      setConnectedAddress(signerAddress);
     } catch (error) {
-        console.error("Connection error:", error);
-        showModal("Failed to connect wallet.");
+      console.error("Connection error:", error);
+      showModal("Failed to connect wallet.");
     }
   }
 
   const isOwner = connectedAddress && ownerAddress && connectedAddress.toLowerCase() === ownerAddress.toLowerCase();
-  
+
   const queryInvoice = useCallback(async (idToQuery) => {
     const ethers = getEthers();
     if (!ethers || !idToQuery) return;
@@ -94,19 +94,19 @@ export default function App() {
       const res = await contract.getInvoice(idToQuery);
 
       if (res.issuer === '0x0000000000000000000000000000000000000000') {
-          setInvoiceData(null);
-          showModal("Invoice not found.");
-          return;
+        setInvoiceData(null);
+        showModal("Invoice not found.");
+        return;
       }
 
       setInvoiceData({
-        amount: res[0], 
+        amount: res[0],
         issuer: res[1],
         paid: res[2],
         payer: res[3],
-        paidAt: res[4] 
+        paidAt: res[4]
       });
-      setQueryId(idToQuery); 
+      setQueryId(idToQuery);
     } catch (err) {
       console.error(err);
       showModal("Error querying invoice: " + (err?.message || String(err)));
@@ -124,9 +124,7 @@ export default function App() {
       await provider.send("eth_requestAccounts", []);
       const signer = await provider.getSigner();
       const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
-
-      const amountUSDC = ethers.parseUnits(amountToCreate, 6); 
-      
+      const amountUSDC = ethers.parseUnits(amountToCreate, 6);
       const tx = await contract.createInvoice(invoiceId, amountUSDC);
       showModal("Creating Invoice...");
       await tx.wait();
@@ -155,26 +153,23 @@ export default function App() {
 
       const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
       const usdc = new ethers.Contract(USDC_ADDRESS, ERC20_ABI, signer);
+      const contractTarget = contract.target;
 
-      const contractTarget = contract.target; 
-      
       const invoice = await contract.getInvoice(queryId);
-      const amount = invoice.amount; 
+      const amount = invoice.amount;
 
       if (invoice.issuer === '0x0000000000000000000000000000000000000000') {
-          showModal("Invoice not found.");
-          return;
+        showModal("Invoice not found.");
+        return;
       }
 
       if (invoice.paid) {
-          showModal("Invoice is already paid.");
-          return;
+        showModal("Invoice is already paid.");
+        return;
       }
-      
-      showModal(`Checking allowance for ${ethers.formatUnits(amount, 6)} USDC...`);
 
+      showModal(`Checking allowance for ${ethers.formatUnits(amount, 6)} USDC...`);
       const allowance = await usdc.allowance(signerAddress, contractTarget);
-      
       if (allowance < amount) {
         showModal("Approving USDC. Please confirm transaction 1/2 in MetaMask.");
         const approveTx = await usdc.approve(contractTarget, amount);
@@ -182,12 +177,12 @@ export default function App() {
         showModal("USDC approved. Proceeding to payment (Transaction 2/2)...");
       }
 
-      const tx = await contract.payInvoice(queryId); 
+      const tx = await contract.payInvoice(queryId);
       showModal("Paying invoice. Please confirm transaction 2/2 in MetaMask.");
       await tx.wait();
-      
+
       showModal("Invoice paid successfully!");
-      queryInvoice(queryId); 
+      queryInvoice(queryId);
     } catch (err) {
       console.error("payInvoice error:", err);
       showModal("Error paying invoice: " + (err.shortMessage || err.message || String(err)));
@@ -218,42 +213,41 @@ export default function App() {
   }
 
   const Modal = ({ message, onClose }) => (
-      <div className="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-50 p-4">
-          <div className="bg-white p-6 rounded-xl shadow-2xl max-w-sm w-full border-t-4 border-blue-600">
-              <p className="text-gray-800 text-lg mb-4 font-medium">{message}</p>
-              <button
-                  onClick={onClose}
-                  className="w-full px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition duration-150 shadow-md"
-              >
-                  Close
-              </button>
-          </div>
+    <div className="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-50 p-4">
+      <div className="bg-white p-6 rounded-xl shadow-2xl max-w-sm w-full border-t-4 border-blue-600">
+        <p className="text-gray-800 text-lg mb-4 font-medium">{message}</p>
+        <button
+          onClick={onClose}
+          className="w-full px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition duration-150 shadow-md"
+        >
+          Close
+        </button>
       </div>
+    </div>
   );
 
   return (
-    <div className="min-h-screen bg-blue-100 p-4 sm:p-6 font-sans flex flex-col justify-center items-center">
-        
+    <div className="min-h-screen bg-[#a0d8f1] flex flex-col justify-center items-center p-4 font-sans">
       <div className="max-w-3xl w-full">
-        <h1 className="text-3xl font-extrabold mb-8 text-center text-gray-800 tracking-tight">
-            PayArc Invoice Registration System
+        <h1 className="text-4xl font-extrabold mb-8 text-center text-gray-800 tracking-tight">
+          PayArc Invoice System
         </h1>
-        
-        <div className="bg-white p-4 rounded-xl shadow-lg mb-6 flex flex-col sm:flex-row justify-between items-center border border-gray-200">
+
+        <div className="bg-white p-6 rounded-xl shadow-lg mb-6 flex flex-col sm:flex-row justify-between items-center border border-gray-200">
           {!connectedAddress ? (
-            <button 
-                onClick={connectWallet} 
-                className="w-full sm:w-auto px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-lg hover:bg-blue-700 transition duration-150 active:scale-95 transform"
+            <button
+              onClick={connectWallet}
+              className="w-full sm:w-auto px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-lg hover:bg-blue-700 transition duration-150 active:scale-95 transform"
             >
-                Connect Wallet
+              Connect Wallet
             </button>
           ) : (
             <div className="text-gray-700 font-medium w-full sm:w-auto mb-2 sm:mb-0">
-                Connected: <span className="text-sm font-mono bg-gray-100 p-1 rounded break-all">{connectedAddress}</span>
+              Connected: <span className="text-sm font-mono bg-gray-100 p-1 rounded break-all">{connectedAddress}</span>
             </div>
           )}
           <div className="text-gray-500 text-sm mt-2 sm:mt-0">
-              Owner: <span className="font-mono break-all">{ownerAddress || "Loading..."}</span>
+            Owner: <span className="font-mono break-all">{ownerAddress || "Loading..."}</span>
           </div>
         </div>
 
@@ -261,39 +255,39 @@ export default function App() {
           <div className="bg-white p-6 rounded-xl shadow-lg mb-6 border border-yellow-400/50">
             <h2 className="text-xl font-bold mb-4 text-yellow-700 border-b pb-2 border-yellow-100">Contract Owner Operations</h2>
             <div className="flex flex-col sm:flex-row gap-3 mb-4">
-              <input 
-                  className="border border-gray-300 p-3 rounded-lg flex-1 focus:ring-green-500 focus:border-green-500" 
-                  placeholder="Invoice ID" 
-                  value={invoiceId} 
-                  onChange={(e) => setInvoiceId(e.target.value)} 
-                  disabled={loading}
+              <input
+                className="border border-gray-300 p-3 rounded-lg flex-1 focus:ring-green-500 focus:border-green-500"
+                placeholder="Invoice ID"
+                value={invoiceId}
+                onChange={(e) => setInvoiceId(e.target.value)}
+                disabled={loading}
               />
-              <input 
-                  className="border border-gray-300 p-3 rounded-lg w-full sm:w-32 focus:ring-green-500 focus:border-green-500" 
-                  placeholder="Amount (USDC)" 
-                  value={amountToCreate} 
-                  onChange={(e) => setAmountToCreate(e.target.value)} 
-                  disabled={loading}
-                  type="number"
+              <input
+                className="border border-gray-300 p-3 rounded-lg w-full sm:w-32 focus:ring-green-500 focus:border-green-500"
+                placeholder="Amount (USDC)"
+                value={amountToCreate}
+                onChange={(e) => setAmountToCreate(e.target.value)}
+                disabled={loading}
+                type="number"
               />
-              <button 
-                  onClick={createInvoice} 
-                  disabled={loading || !invoiceId || !amountToCreate} 
-                  className={`w-full sm:w-auto px-6 py-3 font-semibold rounded-lg transition duration-150 shadow-md ${
-                      loading || !invoiceId || !amountToCreate ? 'bg-gray-400 text-gray-700' : 'bg-green-600 text-white hover:bg-green-700'
-                  }`}
+              <button
+                onClick={createInvoice}
+                disabled={loading || !invoiceId || !amountToCreate}
+                className={`w-full sm:w-auto px-6 py-3 font-semibold rounded-lg transition duration-150 shadow-md ${
+                  loading || !invoiceId || !amountToCreate ? 'bg-gray-400 text-gray-700' : 'bg-green-600 text-white hover:bg-green-700'
+                }`}
               >
-                  {loading ? 'Processing...' : 'Create Invoice'}
+                {loading ? 'Processing...' : 'Create Invoice'}
               </button>
             </div>
-            <button 
-                onClick={withdrawAll} 
-                disabled={loading} 
-                className={`w-full sm:w-auto px-6 py-3 font-semibold rounded-lg transition duration-150 shadow-md ${
-                    loading ? 'bg-gray-400 text-gray-700' : 'bg-red-600 text-white hover:bg-red-700'
-                }`}
+            <button
+              onClick={withdrawAll}
+              disabled={loading}
+              className={`w-full sm:w-auto px-6 py-3 font-semibold rounded-lg transition duration-150 shadow-md ${
+                loading ? 'bg-gray-400 text-gray-700' : 'bg-red-600 text-white hover:bg-red-700'
+              }`}
             >
-                {loading ? 'Processing...' : 'Withdraw All Funds (Owner)'}
+              {loading ? 'Processing...' : 'Withdraw All Funds (Owner)'}
             </button>
           </div>
         )}
@@ -301,30 +295,30 @@ export default function App() {
         <div className="bg-white p-6 rounded-xl shadow-lg border border-blue-400/50">
           <h2 className="text-xl font-bold mb-4 text-blue-700 border-b pb-2 border-blue-100">Invoice Query & Payment</h2>
           <div className="flex flex-col sm:flex-row gap-3 mb-6">
-            <input 
-                className="border border-gray-300 p-3 rounded-lg flex-1 focus:ring-blue-500 focus:border-blue-500" 
-                placeholder="Invoice ID to Query / Pay" 
-                value={queryId} 
-                onChange={(e) => setQueryId(e.target.value)} 
-                disabled={loading}
+            <input
+              className="border border-gray-300 p-3 rounded-lg flex-1 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Invoice ID to Query / Pay"
+              value={queryId}
+              onChange={(e) => setQueryId(e.target.value)}
+              disabled={loading}
             />
-            <button 
-                onClick={() => queryInvoice(queryId)} 
-                disabled={loading || !queryId} 
-                className={`w-full sm:w-auto px-6 py-3 font-semibold rounded-lg transition duration-150 shadow-md ${
-                    loading || !queryId ? 'bg-gray-400 text-gray-700' : 'bg-blue-600 text-white hover:bg-blue-700'
-                }`}
+            <button
+              onClick={() => queryInvoice(queryId)}
+              disabled={loading || !queryId}
+              className={`w-full sm:w-auto px-6 py-3 font-semibold rounded-lg transition duration-150 shadow-md ${
+                loading || !queryId ? 'bg-gray-400 text-gray-700' : 'bg-blue-600 text-white hover:bg-blue-700'
+              }`}
             >
-                {loading ? 'Querying...' : 'Query'}
+              {loading ? 'Querying...' : 'Query'}
             </button>
-            <button 
-                onClick={payInvoice} 
-                disabled={loading || !queryId || !connectedAddress} 
-                className={`w-full sm:w-auto px-6 py-3 font-semibold rounded-lg transition duration-150 shadow-md ${
-                    loading || !queryId || !connectedAddress ? 'bg-gray-400 text-gray-700' : 'bg-yellow-600 text-white hover:bg-yellow-700'
-                }`}
+            <button
+              onClick={payInvoice}
+              disabled={loading || !queryId || !connectedAddress}
+              className={`w-full sm:w-auto px-6 py-3 font-semibold rounded-lg transition duration-150 shadow-md ${
+                loading || !queryId || !connectedAddress ? 'bg-gray-400 text-gray-700' : 'bg-yellow-600 text-white hover:bg-yellow-700'
+              }`}
             >
-                {loading ? 'Payment Processing...' : 'Pay'}
+              {loading ? 'Payment Processing...' : 'Pay'}
             </button>
           </div>
 
@@ -333,27 +327,26 @@ export default function App() {
               <h3 className="text-lg font-bold mb-3 text-blue-800">Invoice Details (ID: {queryId})</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
                 <DetailItem label="Amount (USDC)" value={getEthers().formatUnits(invoiceData.amount, 6)} />
-                <DetailItem label="Issuer" value={invoiceData.issuer} isAddress={true} />
+                <DetailItem label="Issuer" value={invoiceData.issuer} isAddress />
                 <DetailItem label="Payment Status" value={invoiceData.paid ? "Paid" : "Pending"} isPaid={invoiceData.paid} />
-                <DetailItem label="Payer" value={invoiceData.paid ? invoiceData.payer : "-"} isAddress={true} />
+                <DetailItem label="Payer" value={invoiceData.paid ? invoiceData.payer : "-"} isAddress />
                 <DetailItem label="Payment Date" value={invoiceData.paid ? new Date(Number(invoiceData.paidAt) * 1000).toLocaleString() : "-"} />
               </div>
             </div>
           )}
         </div>
       </div>
-      
-      {modalMessage && <Modal message={modalMessage} onClose={hideModal} />}
 
+      {modalMessage && <Modal message={modalMessage} onClose={hideModal} />}
     </div>
   );
 }
 
 const DetailItem = ({ label, value, isAddress = false, isPaid = null }) => (
-    <div className="flex flex-col">
-        <span className="text-sm font-medium text-gray-500">{label}</span>
-        <span className={`text-base font-semibold ${isAddress ? 'font-mono text-xs' : 'break-words'} ${isPaid === true ? 'text-green-600' : isPaid === false ? 'text-red-600' : 'text-gray-800'}`}>
-            {value}
-        </span>
-    </div>
+  <div className="flex flex-col">
+    <span className="text-sm font-medium text-gray-500">{label}</span>
+    <span className={`text-base font-semibold ${isAddress ? 'font-mono text-xs' : 'break-words'} ${isPaid === true ? 'text-green-600' : isPaid === false ? 'text-red-600' : 'text-gray-800'}`}>
+      {value}
+    </span>
+  </div>
 );
