@@ -13,6 +13,7 @@ const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
 const ARC_RPC = process.env.NEXT_PUBLIC_ARC_RPC;
 
 const CONTRACT_ABI = [
+  "function owner() view returns (address)",
   "function getInvoice(string id) view returns (uint256 amount, address issuer, bool paid, address payer, uint256 paidAt)"
 ];
 
@@ -24,6 +25,7 @@ const getEthers = () => {
 
 export default function App() {
   const [connectedAddress, setConnectedAddress] = useState(null);
+  const [ownerAddress, setOwnerAddress] = useState(null);
   const [queryId, setQueryId] = useState("");
   const [invoiceData, setInvoiceData] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -36,6 +38,22 @@ export default function App() {
       script.id = 'ethers-script';
       document.head.appendChild(script);
     }
+  }, []);
+
+  useEffect(() => {
+    const loadOwner = async () => {
+      const ethers = getEthers();
+      if (!ethers || !CONTRACT_ADDRESS || !ARC_RPC) return;
+      try {
+        const provider = new ethers.JsonRpcProvider(ARC_RPC);
+        const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
+        const owner = await contract.owner();
+        setOwnerAddress(owner);
+      } catch (err) {
+        console.error("Error loading owner:", err);
+      }
+    };
+    loadOwner();
   }, []);
 
   async function connectWallet() {
@@ -62,7 +80,7 @@ export default function App() {
       const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
       const res = await contract.getInvoice(queryId);
       setInvoiceData({
-        amount (USDC): res[0],
+        amount: res[0],
         issuer: res[1],
         paid: res[2],
         payer: res[3],
@@ -79,6 +97,8 @@ export default function App() {
   return (
     <div style={{ minHeight: "100vh", background: "#a0d8f1", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", fontFamily: "sans-serif", gap: "20px", padding: "20px" }}>
       <h1 style={{ fontSize: "2.5rem", color: "#1a202c", marginBottom: "20px" }}>PayArc</h1>
+
+      <p style={{ color: "#1a202c" }}>Owner: {ownerAddress || "Loading..."}</p>
 
       {!connectedAddress ? (
         <button onClick={connectWallet} style={{ padding: "10px 20px", borderRadius: "12px", background: "#4f46e5", color: "white", fontWeight: "bold" }}>
@@ -108,7 +128,9 @@ export default function App() {
         <div style={{ marginTop: "20px", background: "#ffffffaa", padding: "15px", borderRadius: "12px", minWidth: "250px", textAlign: "center" }}>
           <p>Amount: {invoiceData.amount}</p>
           <p>Issuer: {invoiceData.issuer}</p>
+          <p>Payer: {invoiceData.payer || "-"}</p>
           <p>Status: {invoiceData.paid ? "Paid" : "Not Paid"}</p>
+          <p>Payment Date: {invoiceData.paidAt ? new Date(Number(invoiceData.paidAt) * 1000).toLocaleString() : "-"}</p>
         </div>
       )}
     </div>
