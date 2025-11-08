@@ -34,25 +34,52 @@ const getEthers = () => {
   return null;
 };
 
-// --- Helper Components for Styling ---
+// --- Inline Style Helper Components ---
 
-const DetailItem = ({ label, value, isAddress = false, isPaid = null }) => (
-  // Updated styles using simple CSS classes and inline styles where necessary
-  <div style={{ flex: '1 1 0px', display: 'flex', flexDirection: 'column' }} className="p-3 bg-white rounded-xl border border-blue-100 shadow-sm">
-    <span style={{ fontSize: '0.875rem', fontWeight: '500', color: '#6B7280' }}>{label}</span>
-    <span style={{ fontSize: '1rem', fontWeight: '600' }} className={`${isAddress ? 'font-mono' : 'break-words'} ${isPaid === true ? 'text-success' : isPaid === false ? 'text-danger' : 'text-default'}`}>
-      {value}
-    </span>
-  </div>
-);
+// Buton stillerini tek bir fonksiyonda topluyoruz.
+const getButtonStyle = (color, isDisabled, isWide = false) => ({
+  width: isWide ? '100%' : 'auto',
+  padding: '12px 24px',
+  fontWeight: '700',
+  borderRadius: '12px',
+  transition: 'background-color 0.2s, transform 0.2s, box-shadow 0.2s',
+  boxShadow: isDisabled ? 'none' : '0 4px 6px rgba(0, 0, 0, 0.1)',
+  cursor: isDisabled ? 'not-allowed' : 'pointer',
+  backgroundColor: isDisabled ? '#D1D5DB' : color,
+  color: isDisabled ? '#6B7280' : 'white',
+  // Inline stilde :hover veya :active kullanılamadığı için sadece temel stili veriyoruz
+});
+
+const getHoverStyle = (baseColor) => {
+    switch(baseColor) {
+        case '#3B82F6': return {backgroundColor: '#2563EB'}; // Blue hover
+        case '#10B981': return {backgroundColor: '#059669'}; // Green hover
+        case '#F59E0B': return {backgroundColor: '#D97706'}; // Yellow hover
+        case '#EF4444': return {backgroundColor: '#DC2626'}; // Red hover
+        default: return {};
+    }
+};
+
+const DetailItem = ({ label, value, isAddress = false, isPaid = null }) => {
+    const textColor = isPaid === true ? '#059669' : isPaid === false ? '#B91C1C' : '#1F2937';
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', padding: '16px', backgroundColor: 'white', borderRadius: '12px', border: '1px solid #DBEAFE', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+        <span style={{ fontSize: '0.875rem', fontWeight: '500', color: '#6B7280' }}>{label}</span>
+        <span style={{ fontSize: '1rem', fontWeight: '600', color: textColor, marginTop: '4px', wordBreak: 'break-word', fontFamily: isAddress ? 'monospace' : 'inherit' }}>
+          {value}
+        </span>
+      </div>
+    );
+};
 
 const Modal = ({ message, onClose }) => (
-  <div className="fixed inset-0 flex items-center justify-center z-50 p-4 modal-overlay">
-    <div className="bg-white p-6 max-w-sm w-full shadow-2xl modal-content">
-      <p style={{ color: '#1F2937', fontSize: '1.125rem', marginBottom: '1rem', fontWeight: '600' }}>{message}</p>
+  <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0, 0, 0, 0.5)', backdropFilter: 'blur(3px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: '16px' }}>
+    <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '16px', boxShadow: '0 20px 25px rgba(0, 0, 0, 0.25)', maxWidth: '400px', width: '100%', borderTop: '5px solid #3B82F6' }}>
+      <p style={{ color: '#1F2937', fontSize: '1.125rem', marginBottom: '16px', fontWeight: '600' }}>{message}</p>
       <button
         onClick={onClose}
-        className="w-full btn-base btn-primary"
+        style={getButtonStyle('#3B82F6', false, true)}
+        // Hover/Active stilleri JS ile yönetilemediği için basit bir buton bırakıldı.
       >
         Close
       </button>
@@ -71,6 +98,8 @@ export default function App() {
   const [amountToCreate, setAmountToCreate] = useState("");
   const [loading, setLoading] = useState(false);
   const { modalMessage, showModal, hideModal } = useModal();
+
+  // ... (Ethers ve Owner yükleme kısımları aynı kalıyor) ...
 
   useEffect(() => {
     if (typeof window !== 'undefined' && !document.getElementById('ethers-script')) {
@@ -248,49 +277,75 @@ export default function App() {
     }
   }
 
+  // --- JSX Rendering (Modern Inline Styles) ---
+
+  const baseContainerStyle = {
+    minHeight: '100vh', 
+    backgroundColor: '#F5F9FF', // Açık Mavi Arka Plan
+    padding: '32px', 
+    fontFamily: 'system-ui, sans-serif'
+  };
+
+  const cardStyle = {
+    backgroundColor: 'white',
+    padding: '24px',
+    borderRadius: '16px', // Yuvarlak Köşeler
+    boxShadow: '0 10px 15px rgba(0, 0, 0, 0.1)', // Modern Gölge
+    marginBottom: '24px',
+  };
+
+  const inputStyle = {
+    border: '1px solid #D1D5DB',
+    padding: '12px',
+    borderRadius: '12px',
+    flex: '1',
+    transition: 'border-color 0.2s',
+  };
+
   return (
-    <div className="min-h-screen p-4 sm:p-8 font-sans bg-modern-light">
+    <div style={baseContainerStyle}>
       
-      <div className="max-w-4xl mx-auto">
-        <h1 className="text-4xl font-extrabold mb-10 text-center text-primary">
+      <div style={{ maxWidth: '896px', margin: '0 auto' }}>
+        <h1 style={{ fontSize: '2.25rem', fontWeight: '800', marginBottom: '40px', textAlign: 'center', color: '#1E40AF' }}>
           PayArc Invoice System 🧾
         </h1>
         
         {/* Wallet Connection & Owner Info */}
-        <div className="p-5 mb-8 flex flex-col sm:flex-row justify-between items-center card-modern">
+        <div style={{ ...cardStyle, display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'center', border: '1px solid #BFDBFE' }}>
           {!connectedAddress ? (
             <button
                 onClick={connectWallet}
-                className="w-full sm:w-auto btn-base btn-primary text-lg"
+                style={getButtonStyle('#3B82F6', false)}
             >
                 Connect Wallet
             </button>
           ) : (
-            <div className="text-default font-medium w-full sm:w-auto mb-2 sm:mb-0" style={{ fontSize: '0.875rem' }}>
-                Connected: <span className="font-mono p-2 rounded-lg break-all inline-block mt-1" style={{ backgroundColor: '#DBEAFE', color: '#1E40AF', fontSize: '0.75rem' }}>{connectedAddress}</span>
+            <div style={{ color: '#374151', fontWeight: '500', display: 'flex', flexDirection: 'column', width: '100%', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.875rem' }}>Connected:</span>
+                <span style={{ fontFamily: 'monospace', backgroundColor: '#DBEAFE', color: '#1E40AF', padding: '8px', borderRadius: '8px', wordBreak: 'break-all', fontSize: '0.75rem', marginTop: '4px', width: '100%', textAlign: 'center' }}>{connectedAddress}</span>
             </div>
           )}
-          <div className="text-default" style={{ fontSize: '0.875rem', marginTop: '1rem', textAlign: 'right' }}>
-              Owner: <span className="font-mono break-all text-default p-1 rounded-md" style={{ backgroundColor: '#F3F4F6', fontSize: '0.75rem' }}>{ownerAddress || "Loading..."}</span>
+          <div style={{ color: '#6B7280', fontSize: '0.875rem', marginTop: '8px', width: '100%', textAlign: 'center' }}>
+              Owner: <span style={{ fontFamily: 'monospace', wordBreak: 'break-all', color: '#374151', backgroundColor: '#F3F4F6', padding: '4px', borderRadius: '4px', fontSize: '0.75rem' }}>{ownerAddress || "Loading..."}</span>
           </div>
         </div>
 
         {/* Owner Operations */}
         {isOwner && (
-          <div className="p-6 mb-8 card-modern" style={{ border: '1px solid #D9F99D' }}>
-            <h2 className="text-2xl font-bold mb-4 text-success border-b pb-3" style={{ borderBottomColor: '#F0FDF4' }}>
+          <div style={{ ...cardStyle, border: '1px solid #D9F99D' }}>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: '700', marginBottom: '16px', color: '#059669', borderBottom: '1px solid #F0FDF4', paddingBottom: '12px' }}>
               👑 Contract Owner Operations
             </h2>
-            <div className="flex flex-col md:flex-row gap-4 mb-4">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '16px' }}>
               <input
-                className="input-modern flex-1"
+                style={inputStyle}
                 placeholder="Invoice ID (Unique)"
                 value={invoiceId}
                 onChange={(e) => setInvoiceId(e.target.value)}
                 disabled={loading}
               />
               <input
-                className="input-modern w-full md:w-40"
+                style={{ ...inputStyle, width: '100%' }}
                 placeholder="Amount (USDC)"
                 value={amountToCreate}
                 onChange={(e) => setAmountToCreate(e.target.value)}
@@ -300,7 +355,7 @@ export default function App() {
               <button
                 onClick={createInvoice}
                 disabled={loading || !invoiceId || !amountToCreate}
-                className="w-full md:w-auto btn-base btn-success"
+                style={getButtonStyle('#10B981', loading || !invoiceId || !amountToCreate, true)}
               >
                 {loading ? 'Processing...' : 'Create Invoice'}
               </button>
@@ -308,7 +363,7 @@ export default function App() {
             <button
               onClick={withdrawAll}
               disabled={loading}
-              className="w-full btn-base btn-danger mt-4"
+              style={getButtonStyle('#EF4444', loading, true)}
             >
               {loading ? 'Processing...' : 'Withdraw All Funds (Owner)'}
             </button>
@@ -316,39 +371,41 @@ export default function App() {
         )}
 
         {/* Invoice Query & Payment */}
-        <div className="p-6 card-modern" style={{ border: '1px solid #BFDBFE' }}>
-          <h2 className="text-2xl font-bold mb-4 text-primary border-b pb-3" style={{ borderBottomColor: '#EFF6FF' }}>
+        <div style={{ ...cardStyle, border: '1px solid #BFDBFE' }}>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: '700', marginBottom: '16px', color: '#1E40AF', borderBottom: '1px solid #EFF6FF', paddingBottom: '12px' }}>
             🔍 Invoice Query & Payment
           </h2>
-          <div className="flex flex-col md:flex-row gap-4 mb-6">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
             <input
-              className="input-modern flex-1"
+              style={inputStyle}
               placeholder="Invoice ID to Query / Pay"
               value={queryId}
               onChange={(e) => setQueryId(e.target.value)}
               disabled={loading}
             />
-            <button
-              onClick={() => queryInvoice(queryId)}
-              disabled={loading || !queryId}
-              className="w-full md:w-auto btn-base btn-primary"
-            >
-              {loading ? 'Querying...' : 'Query'}
-            </button>
-            <button
-              onClick={payInvoice}
-              disabled={loading || !queryId || !connectedAddress}
-              className="w-full md:w-auto btn-base btn-warning"
-            >
-              {loading ? 'Payment Processing...' : 'Pay'}
-            </button>
+            <div style={{ display: 'flex', gap: '16px' }}>
+                <button
+                onClick={() => queryInvoice(queryId)}
+                disabled={loading || !queryId}
+                style={getButtonStyle('#3B82F6', loading || !queryId, true)}
+                >
+                {loading ? 'Querying...' : 'Query'}
+                </button>
+                <button
+                onClick={payInvoice}
+                disabled={loading || !queryId || !connectedAddress}
+                style={getButtonStyle('#F59E0B', loading || !queryId || !connectedAddress, true)}
+                >
+                {loading ? 'Payment Processing...' : 'Pay'}
+                </button>
+            </div>
           </div>
 
           {/* Invoice Details Display */}
           {invoiceData && (
-            <div className="mt-6 p-6 rounded-2xl shadow-inner" style={{ backgroundColor: '#EFF6FF', border: '1px solid #DBEAFE' }}>
-              <h3 className="text-lg font-bold mb-4 text-primary border-b pb-2" style={{ borderBottomColor: '#E0F2F1' }}>Invoice Details (ID: {queryId})</h3>
-              <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
+            <div style={{ marginTop: '24px', padding: '24px', borderRadius: '16px', backgroundColor: '#EFF6FF', border: '1px solid #DBEAFE', boxShadow: 'inset 0 1px 3px rgba(0, 0, 0, 0.05)' }}>
+              <h3 style={{ fontSize: '1.125rem', fontWeight: '700', marginBottom: '16px', color: '#1E40AF', borderBottom: '1px solid #E0F2F1', paddingBottom: '8px' }}>Invoice Details (ID: {queryId})</h3>
+              <div style={{ display: 'grid', gap: '16px', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
                 <DetailItem label="Amount (USDC)" value={getEthers().formatUnits(invoiceData.amount, 6)} />
                 <DetailItem label="Issuer" value={invoiceData.issuer} isAddress={true} />
                 <DetailItem
@@ -368,6 +425,22 @@ export default function App() {
       </div>
         
       {modalMessage && <Modal message={modalMessage} onClose={hideModal} />}
+
+      {/* Basic Media Query for responsiveness - Pure JS/React'te bunu yapmak zordur, ancak minimum düzeyde ekran boyutuna tepki verir */}
+      <style jsx global>{`
+          @media (min-width: 640px) {
+              /* Dikey hizalamaları yatay yapar */
+              .responsive-flex-row {
+                  flex-direction: row;
+              }
+              .responsive-align-end {
+                  text-align: right;
+              }
+              .responsive-full-width-sm {
+                  width: auto;
+              }
+          }
+      `}</style>
 
     </div>
   );
