@@ -1,6 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
 
-// Environment variables and constants remain the same
 const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
 const ARC_RPC = process.env.NEXT_PUBLIC_ARC_RPC;
 const USDC_ADDRESS = "0x3600000000000000000000000000000000000000";
@@ -34,9 +33,6 @@ const getEthers = () => {
   return null;
 };
 
-// --- Inline Style Helper Components ---
-
-// Buton stillerini tek bir fonksiyonda topluyoruz.
 const getButtonStyle = (color, isDisabled, isWide = false) => ({
   width: isWide ? '100%' : 'auto',
   padding: '12px 24px',
@@ -47,7 +43,6 @@ const getButtonStyle = (color, isDisabled, isWide = false) => ({
   cursor: isDisabled ? 'not-allowed' : 'pointer',
   backgroundColor: isDisabled ? '#D1D5DB' : color,
   color: isDisabled ? '#6B7280' : 'white',
-  // Inline stilde :hover veya :active kullanılamadığı için sadece temel stili veriyoruz
 });
 
 const getHoverStyle = (baseColor) => {
@@ -79,14 +74,12 @@ const Modal = ({ message, onClose }) => (
       <button
         onClick={onClose}
         style={getButtonStyle('#3B82F6', false, true)}
-        // Hover/Active stilleri JS ile yönetilemediği için basit bir buton bırakıldı.
       >
         Close
       </button>
     </div>
   </div>
 );
-// ------------------------------------
 
 
 export default function App() {
@@ -99,7 +92,6 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const { modalMessage, showModal, hideModal } = useModal();
 
-  // ... (Ethers ve Owner yükleme kısımları aynı kalıyor) ...
 
   useEffect(() => {
     if (typeof window !== 'undefined' && !document.getElementById('ethers-script')) {
@@ -277,11 +269,10 @@ export default function App() {
     }
   }
 
-  // --- JSX Rendering (Modern Inline Styles) ---
 
   const baseContainerStyle = {
     minHeight: '100vh', 
-    backgroundColor: '#F5F9FF', // Açık Mavi Arka Plan
+    backgroundColor: '#F5F9FF',
     padding: '32px', 
     fontFamily: 'system-ui, sans-serif'
   };
@@ -289,8 +280,8 @@ export default function App() {
   const cardStyle = {
     backgroundColor: 'white',
     padding: '24px',
-    borderRadius: '16px', // Yuvarlak Köşeler
-    boxShadow: '0 10px 15px rgba(0, 0, 0, 0.1)', // Modern Gölge
+    borderRadius: '16px', 
+    boxShadow: '0 10px 15px rgba(0, 0, 0, 0.1)', 
     marginBottom: '24px',
   };
 
@@ -426,7 +417,7 @@ export default function App() {
         
       {modalMessage && <Modal message={modalMessage} onClose={hideModal} />}
 
-      {/* Basic Media Query for responsiveness - Pure JS/React'te bunu yapmak zordur, ancak minimum düzeyde ekran boyutuna tepki verir */}
+      {/* Basic Media Query for responsiveness */}
       <style jsx global>{`
           @media (min-width: 640px) {
               /* Dikey hizalamaları yatay yapar */
