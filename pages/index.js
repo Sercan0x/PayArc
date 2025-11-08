@@ -172,7 +172,7 @@ export default function Home() {
 
         {invoiceData && (
           <div style={{ marginTop: 12, textAlign: "left" }}>
-            <div>Amount (wei): {invoiceData.amountWei}</div>
+            <div>Amount (USDC): {invoiceData.amountWei}</div>
             <div>Amount (ETH): {invoiceData.amountWei ? (Number(invoiceData.amountWei) / 1e18) : 0}</div>
             <div>Issuer: {invoiceData.issuer}</div>
             <div>Paid: {invoiceData.paid ? "Yes" : "No"}</div>
