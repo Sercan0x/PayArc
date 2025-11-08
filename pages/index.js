@@ -37,21 +37,22 @@ const getEthers = () => {
 // --- Helper Components for Styling ---
 
 const DetailItem = ({ label, value, isAddress = false, isPaid = null }) => (
-  <div className="flex flex-col p-3 bg-white rounded-xl border border-blue-100 shadow-sm">
-    <span className="text-sm font-medium text-gray-500">{label}</span>
-    <span className={`text-base font-semibold ${isAddress ? 'font-mono text-xs' : 'break-words'} ${isPaid === true ? 'text-green-600' : isPaid === false ? 'text-red-600' : 'text-gray-900'}`}>
+  // Updated styles using simple CSS classes and inline styles where necessary
+  <div style={{ flex: '1 1 0px', display: 'flex', flexDirection: 'column' }} className="p-3 bg-white rounded-xl border border-blue-100 shadow-sm">
+    <span style={{ fontSize: '0.875rem', fontWeight: '500', color: '#6B7280' }}>{label}</span>
+    <span style={{ fontSize: '1rem', fontWeight: '600' }} className={`${isAddress ? 'font-mono' : 'break-words'} ${isPaid === true ? 'text-success' : isPaid === false ? 'text-danger' : 'text-default'}`}>
       {value}
     </span>
   </div>
 );
 
 const Modal = ({ message, onClose }) => (
-  <div className="fixed inset-0 bg-black bg-opacity-40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-    <div className="bg-white p-6 rounded-2xl shadow-2xl max-w-sm w-full border-t-4 border-blue-600 transition duration-300 transform scale-100 opacity-100">
-      <p className="text-gray-800 text-lg mb-4 font-semibold">{message}</p>
+  <div className="fixed inset-0 flex items-center justify-center z-50 p-4 modal-overlay">
+    <div className="bg-white p-6 max-w-sm w-full shadow-2xl modal-content">
+      <p style={{ color: '#1F2937', fontSize: '1.125rem', marginBottom: '1rem', fontWeight: '600' }}>{message}</p>
       <button
         onClick={onClose}
-        className="w-full px-4 py-2 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition duration-300 shadow-lg shadow-blue-500/50 transform hover:scale-[1.01] active:scale-95"
+        className="w-full btn-base btn-primary"
       >
         Close
       </button>
@@ -248,48 +249,48 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-blue-50 p-4 sm:p-8 font-sans transition-colors duration-300">
+    <div className="min-h-screen p-4 sm:p-8 font-sans bg-modern-light">
       
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-4xl font-extrabold mb-10 text-center text-blue-800 tracking-tight">
+        <h1 className="text-4xl font-extrabold mb-10 text-center text-primary">
           PayArc Invoice System 🧾
         </h1>
         
         {/* Wallet Connection & Owner Info */}
-        <div className="bg-white p-5 rounded-2xl shadow-xl mb-8 flex flex-col sm:flex-row justify-between items-center border border-blue-200">
+        <div className="p-5 mb-8 flex flex-col sm:flex-row justify-between items-center card-modern">
           {!connectedAddress ? (
             <button
                 onClick={connectWallet}
-                className="w-full sm:w-auto px-8 py-3 bg-blue-600 text-white font-bold rounded-xl shadow-blue-500/50 hover:bg-blue-700 transition duration-300 active:scale-95 transform tracking-wide text-lg"
+                className="w-full sm:w-auto btn-base btn-primary text-lg"
             >
                 Connect Wallet
             </button>
           ) : (
-            <div className="text-gray-700 font-medium w-full sm:w-auto mb-2 sm:mb-0 text-sm">
-                Connected: <span className="font-mono bg-blue-100 text-blue-800 p-2 rounded-lg break-all inline-block mt-1">{connectedAddress}</span>
+            <div className="text-default font-medium w-full sm:w-auto mb-2 sm:mb-0" style={{ fontSize: '0.875rem' }}>
+                Connected: <span className="font-mono p-2 rounded-lg break-all inline-block mt-1" style={{ backgroundColor: '#DBEAFE', color: '#1E40AF', fontSize: '0.75rem' }}>{connectedAddress}</span>
             </div>
           )}
-          <div className="text-gray-500 text-sm mt-4 sm:mt-0 sm:text-right">
-              Owner: <span className="font-mono break-all text-gray-600 bg-gray-100 p-1 rounded-md">{ownerAddress || "Loading..."}</span>
+          <div className="text-default" style={{ fontSize: '0.875rem', marginTop: '1rem', textAlign: 'right' }}>
+              Owner: <span className="font-mono break-all text-default p-1 rounded-md" style={{ backgroundColor: '#F3F4F6', fontSize: '0.75rem' }}>{ownerAddress || "Loading..."}</span>
           </div>
         </div>
 
         {/* Owner Operations */}
         {isOwner && (
-          <div className="bg-white p-6 rounded-2xl shadow-xl mb-8 border border-green-400/50">
-            <h2 className="text-2xl font-bold mb-4 text-green-700 border-b pb-3 border-green-100 flex items-center">
+          <div className="p-6 mb-8 card-modern" style={{ border: '1px solid #D9F99D' }}>
+            <h2 className="text-2xl font-bold mb-4 text-success border-b pb-3" style={{ borderBottomColor: '#F0FDF4' }}>
               👑 Contract Owner Operations
             </h2>
             <div className="flex flex-col md:flex-row gap-4 mb-4">
               <input
-                className="border border-gray-300 p-3 rounded-xl flex-1 focus:ring-green-500 focus:border-green-500 transition-colors"
+                className="input-modern flex-1"
                 placeholder="Invoice ID (Unique)"
                 value={invoiceId}
                 onChange={(e) => setInvoiceId(e.target.value)}
                 disabled={loading}
               />
               <input
-                className="border border-gray-300 p-3 rounded-xl w-full md:w-40 focus:ring-green-500 focus:border-green-500 transition-colors"
+                className="input-modern w-full md:w-40"
                 placeholder="Amount (USDC)"
                 value={amountToCreate}
                 onChange={(e) => setAmountToCreate(e.target.value)}
@@ -299,9 +300,7 @@ export default function App() {
               <button
                 onClick={createInvoice}
                 disabled={loading || !invoiceId || !amountToCreate}
-                className={`w-full md:w-auto px-6 py-3 font-bold rounded-xl transition duration-300 shadow-lg transform hover:scale-[1.01] active:scale-95 ${
-                  loading || !invoiceId || !amountToCreate ? 'bg-gray-400 text-gray-700' : 'bg-green-600 text-white hover:bg-green-700 shadow-green-500/50'
-                }`}
+                className="w-full md:w-auto btn-base btn-success"
               >
                 {loading ? 'Processing...' : 'Create Invoice'}
               </button>
@@ -309,9 +308,7 @@ export default function App() {
             <button
               onClick={withdrawAll}
               disabled={loading}
-              className={`w-full px-6 py-3 font-bold rounded-xl transition duration-300 shadow-lg transform hover:scale-[1.01] active:scale-95 mt-4 ${
-                loading ? 'bg-gray-400 text-gray-700' : 'bg-red-600 text-white hover:bg-red-700 shadow-red-500/50'
-              }`}
+              className="w-full btn-base btn-danger mt-4"
             >
               {loading ? 'Processing...' : 'Withdraw All Funds (Owner)'}
             </button>
@@ -319,13 +316,13 @@ export default function App() {
         )}
 
         {/* Invoice Query & Payment */}
-        <div className="bg-white p-6 rounded-2xl shadow-xl border border-blue-400/50">
-          <h2 className="text-2xl font-bold mb-4 text-blue-700 border-b pb-3 border-blue-100 flex items-center">
+        <div className="p-6 card-modern" style={{ border: '1px solid #BFDBFE' }}>
+          <h2 className="text-2xl font-bold mb-4 text-primary border-b pb-3" style={{ borderBottomColor: '#EFF6FF' }}>
             🔍 Invoice Query & Payment
           </h2>
           <div className="flex flex-col md:flex-row gap-4 mb-6">
             <input
-              className="border border-gray-300 p-3 rounded-xl flex-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              className="input-modern flex-1"
               placeholder="Invoice ID to Query / Pay"
               value={queryId}
               onChange={(e) => setQueryId(e.target.value)}
@@ -334,18 +331,14 @@ export default function App() {
             <button
               onClick={() => queryInvoice(queryId)}
               disabled={loading || !queryId}
-              className={`w-full md:w-auto px-6 py-3 font-bold rounded-xl transition duration-300 shadow-lg transform hover:scale-[1.01] active:scale-95 ${
-                loading || !queryId ? 'bg-gray-400 text-gray-700' : 'bg-blue-600 text-white hover:bg-blue-700 shadow-blue-500/50'
-              }`}
+              className="w-full md:w-auto btn-base btn-primary"
             >
               {loading ? 'Querying...' : 'Query'}
             </button>
             <button
               onClick={payInvoice}
               disabled={loading || !queryId || !connectedAddress}
-              className={`w-full md:w-auto px-6 py-3 font-bold rounded-xl transition duration-300 shadow-lg transform hover:scale-[1.01] active:scale-95 ${
-                loading || !queryId || !connectedAddress ? 'bg-gray-400 text-gray-700' : 'bg-yellow-600 text-white hover:bg-yellow-700 shadow-yellow-500/50'
-              }`}
+              className="w-full md:w-auto btn-base btn-warning"
             >
               {loading ? 'Payment Processing...' : 'Pay'}
             </button>
@@ -353,9 +346,9 @@ export default function App() {
 
           {/* Invoice Details Display */}
           {invoiceData && (
-            <div className="mt-6 bg-blue-50 p-6 rounded-2xl border border-blue-200 shadow-inner">
-              <h3 className="text-lg font-bold mb-4 text-blue-800 border-b pb-2 border-blue-100">Invoice Details (ID: {queryId})</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-gray-700">
+            <div className="mt-6 p-6 rounded-2xl shadow-inner" style={{ backgroundColor: '#EFF6FF', border: '1px solid #DBEAFE' }}>
+              <h3 className="text-lg font-bold mb-4 text-primary border-b pb-2" style={{ borderBottomColor: '#E0F2F1' }}>Invoice Details (ID: {queryId})</h3>
+              <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
                 <DetailItem label="Amount (USDC)" value={getEthers().formatUnits(invoiceData.amount, 6)} />
                 <DetailItem label="Issuer" value={invoiceData.issuer} isAddress={true} />
                 <DetailItem
