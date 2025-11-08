@@ -176,8 +176,6 @@ export default function Home() {
             <div>Amount (ETH): {invoiceData.amountWei ? (Number(invoiceData.amountWei) / 1e18) : 0}</div>
             <div>Issuer: {invoiceData.issuer}</div>
             <div>Paid: {invoiceData.paid ? "Yes" : "No"}</div>
-            <div>Payer: {invoiceData.payer}</div>
-            <div>PaidAt (unix): {invoiceData.paidAt}</div>
           </div>
         )}
       </div>
