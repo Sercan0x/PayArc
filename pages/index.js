@@ -401,7 +401,7 @@ export default function App() {
                 <DetailItem label="Issuer" value={invoiceData.issuer} isAddress={true} />
                 <DetailItem
                     label="Payment Status"
-                    value={invoiceData.paid ? "Paid" : "Pending"}
+                    value={invoiceData.paid ? "Paid" : "Not Paid"}
                     isPaid={invoiceData.paid}
                 />
                 <DetailItem label="Payer" value={invoiceData.paid ? invoiceData.payer : "-"} isAddress={true} />
