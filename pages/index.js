@@ -1,17 +1,9 @@
 import { useEffect, useState, useCallback } from "react";
 
-const loadIcons = () => {
-  if (!document.getElementById('lucide-script')) {
-    const script = document.createElement('script');
-    script.src = "https://cdn.jsdelivr.net/npm/lucide@latest";
-    script.id = 'lucide-script';
-    document.head.appendChild(script);
-  }
-};
-
+// Environment variables and constants remain the same
 const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
 const ARC_RPC = process.env.NEXT_PUBLIC_ARC_RPC;
-const USDC_ADDRESS = "0x3600000000000000000000000000000000000000"; 
+const USDC_ADDRESS = "0x3600000000000000000000000000000000000000";
 
 const CONTRACT_ABI = [
   "function owner() view returns (address)",
@@ -35,21 +27,39 @@ const useModal = () => {
 };
 
 const getEthers = () => {
-  if (typeof window !== 'undefined' && window.ethers) return window.ethers;
+  if (typeof window !== 'undefined' && window.ethers) {
+    return window.ethers;
+  }
   console.error("Ethers library is not loaded.");
   return null;
 };
 
-const Icon = ({ name, className }) => {
-  const [IconComponent, setIconComponent] = useState(null);
-  useEffect(() => {
-    if (window.lucide && window.lucide.icons[name]) {
-      setIconComponent(() => window.lucide.icons[name]);
-    }
-  }, [name]);
-  if (!IconComponent) return null;
-  return <IconComponent className={className} />;
-};
+// --- Helper Components for Styling ---
+
+const DetailItem = ({ label, value, isAddress = false, isPaid = null }) => (
+  <div className="flex flex-col p-3 bg-white rounded-xl border border-blue-100 shadow-sm">
+    <span className="text-sm font-medium text-gray-500">{label}</span>
+    <span className={`text-base font-semibold ${isAddress ? 'font-mono text-xs' : 'break-words'} ${isPaid === true ? 'text-green-600' : isPaid === false ? 'text-red-600' : 'text-gray-900'}`}>
+      {value}
+    </span>
+  </div>
+);
+
+const Modal = ({ message, onClose }) => (
+  <div className="fixed inset-0 bg-black bg-opacity-40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div className="bg-white p-6 rounded-2xl shadow-2xl max-w-sm w-full border-t-4 border-blue-600 transition duration-300 transform scale-100 opacity-100">
+      <p className="text-gray-800 text-lg mb-4 font-semibold">{message}</p>
+      <button
+        onClick={onClose}
+        className="w-full px-4 py-2 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition duration-300 shadow-lg shadow-blue-500/50 transform hover:scale-[1.01] active:scale-95"
+      >
+        Close
+      </button>
+    </div>
+  </div>
+);
+// ------------------------------------
+
 
 export default function App() {
   const [connectedAddress, setConnectedAddress] = useState(null);
@@ -62,8 +72,7 @@ export default function App() {
   const { modalMessage, showModal, hideModal } = useModal();
 
   useEffect(() => {
-    loadIcons();
-    if (!document.getElementById('ethers-script')) {
+    if (typeof window !== 'undefined' && !document.getElementById('ethers-script')) {
       const script = document.createElement('script');
       script.src = "https://cdn.jsdelivr.net/npm/ethers@6.11.1/dist/ethers.umd.min.js";
       script.id = 'ethers-script';
@@ -92,19 +101,19 @@ export default function App() {
     const ethers = getEthers();
     if (!ethers || !window.ethereum) return showModal("MetaMask required.");
     try {
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      await provider.send("eth_requestAccounts", []);
-      const signer = await provider.getSigner();
-      const signerAddress = await signer.getAddress();
-      setConnectedAddress(signerAddress);
+        const provider = new ethers.BrowserProvider(window.ethereum);
+        await provider.send("eth_requestAccounts", []);
+        const signer = await provider.getSigner();
+        const signerAddress = await signer.getAddress();
+        setConnectedAddress(signerAddress);
     } catch (error) {
-      console.error("Connection error:", error);
-      showModal("Failed to connect wallet.");
+        console.error("Connection error:", error);
+        showModal("Failed to connect wallet.");
     }
   }
 
   const isOwner = connectedAddress && ownerAddress && connectedAddress.toLowerCase() === ownerAddress.toLowerCase();
-
+    
   const queryInvoice = useCallback(async (idToQuery) => {
     const ethers = getEthers();
     if (!ethers || !idToQuery) return;
@@ -115,9 +124,9 @@ export default function App() {
       const res = await contract.getInvoice(idToQuery);
 
       if (res.issuer === '0x0000000000000000000000000000000000000000') {
-        setInvoiceData(null);
-        showModal("Invoice not found.");
-        return;
+          setInvoiceData(null);
+          showModal("Invoice not found.");
+          return;
       }
 
       setInvoiceData({
@@ -147,7 +156,7 @@ export default function App() {
       const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
 
       const amountUSDC = ethers.parseUnits(amountToCreate, 6);
-
+      
       const tx = await contract.createInvoice(invoiceId, amountUSDC);
       showModal("Creating Invoice...");
       await tx.wait();
@@ -178,22 +187,24 @@ export default function App() {
       const usdc = new ethers.Contract(USDC_ADDRESS, ERC20_ABI, signer);
 
       const contractTarget = contract.target;
+      
       const invoice = await contract.getInvoice(queryId);
       const amount = invoice.amount;
 
       if (invoice.issuer === '0x0000000000000000000000000000000000000000') {
-        showModal("Invoice not found.");
-        return;
+          showModal("Invoice not found.");
+          return;
       }
 
       if (invoice.paid) {
-        showModal("Invoice is already paid.");
-        return;
+          showModal("Invoice is already paid.");
+          return;
       }
-
+      
       showModal(`Checking allowance for ${ethers.formatUnits(amount, 6)} USDC...`);
-      const allowance = await usdc.allowance(signerAddress, contractTarget);
 
+      const allowance = await usdc.allowance(signerAddress, contractTarget);
+      
       if (allowance < amount) {
         showModal("Approving USDC. Please confirm transaction 1/2 in MetaMask.");
         const approveTx = await usdc.approve(contractTarget, amount);
@@ -204,7 +215,7 @@ export default function App() {
       const tx = await contract.payInvoice(queryId);
       showModal("Paying invoice. Please confirm transaction 2/2 in MetaMask.");
       await tx.wait();
-
+      
       showModal("Invoice paid successfully!");
       queryInvoice(queryId);
     } catch (err) {
@@ -236,68 +247,49 @@ export default function App() {
     }
   }
 
-  const Modal = ({ message, onClose }) => (
-    <div className="fixed inset-0 bg-gray-900 bg-opacity-80 flex items-center justify-center z-50 p-4 backdrop-blur-md">
-      <div className="bg-gray-800 p-8 rounded-3xl shadow-2xl max-w-sm w-full border border-indigo-500/50 transform transition-all duration-300 scale-100">
-        <h3 className="text-xl font-bold text-white mb-4 flex items-center">
-          <Icon name="alert-triangle" className="w-5 h-5 text-indigo-400 mr-2" />
-          Transaction Status
-        </h3>
-        <p className="text-gray-300 text-lg mb-6 font-medium">{message}</p>
-        <button
-          onClick={onClose}
-          className="w-full px-4 py-3 bg-indigo-600 text-white font-semibold rounded-xl hover:bg-indigo-700 transition duration-150 shadow-lg shadow-indigo-500/30"
-        >
-          Close
-        </button>
-      </div>
-    </div>
-  );
-
   return (
-    <div className="min-h-screen bg-gradient-to-tr from-gray-900 via-gray-800 to-gray-900 p-4 sm:p-8 font-sans">
-      <div className="max-w-5xl mx-auto">
-        <h1 className="text-4xl sm:text-5xl font-extrabold mb-12 text-center tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-pink-400">
-          PayArc Invoice System
+    <div className="min-h-screen bg-blue-50 p-4 sm:p-8 font-sans transition-colors duration-300">
+      
+      <div className="max-w-4xl mx-auto">
+        <h1 className="text-4xl font-extrabold mb-10 text-center text-blue-800 tracking-tight">
+          PayArc Invoice System 🧾
         </h1>
-
-        <div className="bg-gray-800 p-6 rounded-3xl shadow-2xl mb-8 flex flex-col sm:flex-row justify-between items-center border border-gray-700 transition hover:shadow-indigo-600/40">
+        
+        {/* Wallet Connection & Owner Info */}
+        <div className="bg-white p-5 rounded-2xl shadow-xl mb-8 flex flex-col sm:flex-row justify-between items-center border border-blue-200">
           {!connectedAddress ? (
             <button
-              onClick={connectWallet}
-              className="w-full sm:w-auto px-6 py-3 bg-indigo-600 text-white font-bold rounded-xl shadow-lg hover:bg-indigo-700 transition transform active:scale-95 flex items-center justify-center"
+                onClick={connectWallet}
+                className="w-full sm:w-auto px-8 py-3 bg-blue-600 text-white font-bold rounded-xl shadow-blue-500/50 hover:bg-blue-700 transition duration-300 active:scale-95 transform tracking-wide text-lg"
             >
-              <Icon name="wallet" className="w-5 h-5 mr-2" />
-              Connect Wallet
+                Connect Wallet
             </button>
           ) : (
-            <div className="text-gray-300 font-medium w-full sm:w-auto mb-2 sm:mb-0 flex items-center">
-              <Icon name="plug-zap" className="w-5 h-5 text-green-500 mr-2" />
-              Connected: <span className="text-sm font-mono bg-gray-700 p-2 ml-2 rounded-lg break-all text-indigo-300">{connectedAddress}</span>
+            <div className="text-gray-700 font-medium w-full sm:w-auto mb-2 sm:mb-0 text-sm">
+                Connected: <span className="font-mono bg-blue-100 text-blue-800 p-2 rounded-lg break-all inline-block mt-1">{connectedAddress}</span>
             </div>
           )}
-          <div className="text-gray-500 text-sm mt-3 sm:mt-0 flex items-center">
-            <Icon name="lock" className="w-4 h-4 mr-1" />
-            Owner: <span className="font-mono break-all ml-1 text-gray-400">{ownerAddress || "Loading..."}</span>
+          <div className="text-gray-500 text-sm mt-4 sm:mt-0 sm:text-right">
+              Owner: <span className="font-mono break-all text-gray-600 bg-gray-100 p-1 rounded-md">{ownerAddress || "Loading..."}</span>
           </div>
         </div>
 
+        {/* Owner Operations */}
         {isOwner && (
-          <div className="bg-gray-800 p-6 rounded-3xl shadow-2xl mb-8 border border-yellow-500/40 transition hover:shadow-yellow-500/30">
-            <h2 className="text-2xl font-bold mb-4 text-yellow-500 border-b pb-2 border-gray-700 flex items-center">
-              <Icon name="crown" className="w-6 h-6 mr-2" />
-              Owner Operations
+          <div className="bg-white p-6 rounded-2xl shadow-xl mb-8 border border-green-400/50">
+            <h2 className="text-2xl font-bold mb-4 text-green-700 border-b pb-3 border-green-100 flex items-center">
+              👑 Contract Owner Operations
             </h2>
             <div className="flex flex-col md:flex-row gap-4 mb-4">
               <input
-                className="border border-gray-600 p-3 bg-gray-700 text-white rounded-xl flex-1 focus:ring-green-500 focus:border-green-500 transition"
-                placeholder="Invoice ID (New)"
+                className="border border-gray-300 p-3 rounded-xl flex-1 focus:ring-green-500 focus:border-green-500 transition-colors"
+                placeholder="Invoice ID (Unique)"
                 value={invoiceId}
                 onChange={(e) => setInvoiceId(e.target.value)}
                 disabled={loading}
               />
               <input
-                className="border border-gray-600 p-3 bg-gray-700 text-white rounded-xl w-full md:w-36 focus:ring-green-500 focus:border-green-500 transition"
+                className="border border-gray-300 p-3 rounded-xl w-full md:w-40 focus:ring-green-500 focus:border-green-500 transition-colors"
                 placeholder="Amount (USDC)"
                 value={amountToCreate}
                 onChange={(e) => setAmountToCreate(e.target.value)}
@@ -307,35 +299,33 @@ export default function App() {
               <button
                 onClick={createInvoice}
                 disabled={loading || !invoiceId || !amountToCreate}
-                className={`w-full md:w-auto px-6 py-3 font-bold rounded-xl transition duration-150 shadow-md flex items-center justify-center ${
-                  loading || !invoiceId || !amountToCreate ? 'bg-gray-600 text-gray-400 cursor-not-allowed' : 'bg-green-600 text-white hover:bg-green-700 shadow-green-600/30'
+                className={`w-full md:w-auto px-6 py-3 font-bold rounded-xl transition duration-300 shadow-lg transform hover:scale-[1.01] active:scale-95 ${
+                  loading || !invoiceId || !amountToCreate ? 'bg-gray-400 text-gray-700' : 'bg-green-600 text-white hover:bg-green-700 shadow-green-500/50'
                 }`}
               >
-                <Icon name="plus" className="w-5 h-5 mr-2" />
-                {loading ? 'Creating...' : 'Create Invoice'}
+                {loading ? 'Processing...' : 'Create Invoice'}
               </button>
             </div>
             <button
               onClick={withdrawAll}
               disabled={loading}
-              className={`w-full px-6 py-3 font-bold rounded-xl transition duration-150 shadow-md mt-2 flex items-center justify-center ${
-                loading ? 'bg-gray-600 text-gray-400 cursor-not-allowed' : 'bg-red-600 text-white hover:bg-red-700 shadow-red-600/30'
+              className={`w-full px-6 py-3 font-bold rounded-xl transition duration-300 shadow-lg transform hover:scale-[1.01] active:scale-95 mt-4 ${
+                loading ? 'bg-gray-400 text-gray-700' : 'bg-red-600 text-white hover:bg-red-700 shadow-red-500/50'
               }`}
             >
-              <Icon name="banknote" className="w-5 h-5 mr-2" />
-              {loading ? 'Processing...' : 'Withdraw All Funds'}
+              {loading ? 'Processing...' : 'Withdraw All Funds (Owner)'}
             </button>
           </div>
         )}
 
-        <div className="bg-gray-800 p-6 rounded-3xl shadow-2xl border border-indigo-500/40 transition hover:shadow-indigo-500/30">
-          <h2 className="text-2xl font-bold mb-4 text-indigo-400 border-b pb-2 border-gray-700 flex items-center">
-            <Icon name="search" className="w-6 h-6 mr-2" />
-            Invoice Query & Payment
+        {/* Invoice Query & Payment */}
+        <div className="bg-white p-6 rounded-2xl shadow-xl border border-blue-400/50">
+          <h2 className="text-2xl font-bold mb-4 text-blue-700 border-b pb-3 border-blue-100 flex items-center">
+            🔍 Invoice Query & Payment
           </h2>
-          <div className="flex flex-col sm:flex-row gap-4 mb-6">
+          <div className="flex flex-col md:flex-row gap-4 mb-6">
             <input
-              className="border border-gray-600 p-3 bg-gray-700 text-white rounded-xl flex-1 focus:ring-indigo-500 focus:border-indigo-500 transition"
+              className="border border-gray-300 p-3 rounded-xl flex-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
               placeholder="Invoice ID to Query / Pay"
               value={queryId}
               onChange={(e) => setQueryId(e.target.value)}
@@ -344,65 +334,48 @@ export default function App() {
             <button
               onClick={() => queryInvoice(queryId)}
               disabled={loading || !queryId}
-              className={`w-full sm:w-auto px-6 py-3 font-bold rounded-xl transition duration-150 shadow-md flex items-center justify-center ${
-                loading || !queryId ? 'bg-gray-600 text-gray-400 cursor-not-allowed' : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-600/30'
+              className={`w-full md:w-auto px-6 py-3 font-bold rounded-xl transition duration-300 shadow-lg transform hover:scale-[1.01] active:scale-95 ${
+                loading || !queryId ? 'bg-gray-400 text-gray-700' : 'bg-blue-600 text-white hover:bg-blue-700 shadow-blue-500/50'
               }`}
             >
-              <Icon name="eye" className="w-5 h-5 mr-2" />
               {loading ? 'Querying...' : 'Query'}
             </button>
             <button
               onClick={payInvoice}
               disabled={loading || !queryId || !connectedAddress}
-              className={`w-full sm:w-auto px-6 py-3 font-bold rounded-xl transition duration-150 shadow-md flex items-center justify-center ${
-                loading || !queryId || !connectedAddress ? 'bg-gray-600 text-gray-400 cursor-not-allowed' : 'bg-yellow-500 text-gray-900 hover:bg-yellow-600 shadow-yellow-500/30'
+              className={`w-full md:w-auto px-6 py-3 font-bold rounded-xl transition duration-300 shadow-lg transform hover:scale-[1.01] active:scale-95 ${
+                loading || !queryId || !connectedAddress ? 'bg-gray-400 text-gray-700' : 'bg-yellow-600 text-white hover:bg-yellow-700 shadow-yellow-500/50'
               }`}
             >
-              <Icon name="credit-card" className="w-5 h-5 mr-2" />
               {loading ? 'Payment Processing...' : 'Pay'}
             </button>
           </div>
 
+          {/* Invoice Details Display */}
           {invoiceData && (
-            <div className="mt-8 bg-gray-700 p-6 rounded-xl border border-indigo-500/30 shadow-inner transition hover:shadow-indigo-500/20">
-              <h3 className="text-xl font-bold mb-4 text-white flex items-center">
-                <Icon name="file-text" className="w-5 h-5 mr-2 text-indigo-300" />
-                Invoice Details (ID: {queryId})
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-gray-300">
-                <DetailItem label="Amount (USDC)" value={getEthers().formatUnits(invoiceData.amount, 6)} icon="dollar-sign" />
-                <DetailItem label="Issuer" value={invoiceData.issuer} isAddress={true} icon="user" />
-                <DetailItem label="Payment Status" value={invoiceData.paid ? "Paid" : "Not Paid"} isPaid={invoiceData.paid} icon="check-circle" />
-                <DetailItem label="Payer" value={invoiceData.paid ? invoiceData.payer : "-"} isAddress={true} icon="send" />
-                <DetailItem label="Payment Date" value={invoiceData.paid ? new Date(Number(invoiceData.paidAt) * 1000).toLocaleString() : "-"} icon="calendar" />
+            <div className="mt-6 bg-blue-50 p-6 rounded-2xl border border-blue-200 shadow-inner">
+              <h3 className="text-lg font-bold mb-4 text-blue-800 border-b pb-2 border-blue-100">Invoice Details (ID: {queryId})</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-gray-700">
+                <DetailItem label="Amount (USDC)" value={getEthers().formatUnits(invoiceData.amount, 6)} />
+                <DetailItem label="Issuer" value={invoiceData.issuer} isAddress={true} />
+                <DetailItem
+                    label="Payment Status"
+                    value={invoiceData.paid ? "Paid" : "Pending"}
+                    isPaid={invoiceData.paid}
+                />
+                <DetailItem label="Payer" value={invoiceData.paid ? invoiceData.payer : "-"} isAddress={true} />
+                <DetailItem
+                    label="Payment Date"
+                    value={invoiceData.paid ? new Date(Number(invoiceData.paidAt) * 1000).toLocaleString() : "-"}
+                />
               </div>
             </div>
           )}
         </div>
       </div>
-
+        
       {modalMessage && <Modal message={modalMessage} onClose={hideModal} />}
+
     </div>
   );
 }
-
-const DetailItem = ({ label, value, isAddress = false, isPaid = null, icon }) => {
-  let statusIcon = null;
-  let statusIconColor = "text-gray-400";
-  if (isPaid !== null) {
-    statusIcon = isPaid ? "check-circle" : "alert-triangle";
-    statusIconColor = isPaid ? "text-green-500" : "text-red-500";
-  }
-
-  return (
-    <div className="flex flex-col bg-gray-700 p-3 rounded-lg border border-gray-600 transition hover:shadow-inner hover:shadow-indigo-500/20">
-      <span className="text-xs font-medium text-gray-400 mb-1 flex items-center">
-        <Icon name={statusIcon || icon} className={`w-3 h-3 mr-1 ${statusIconColor}`} />
-        {label}:
-      </span>
-      <span className={`text-sm font-semibold break-words ${isAddress ? 'font-mono text-sm text-indigo-300' : 'text-white'} ${isPaid === true ? 'text-green-400' : isPaid === false ? 'text-red-400' : ''}`}>
-        {value}
-      </span>
-    </div>
-  );
-};
