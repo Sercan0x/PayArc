@@ -390,10 +390,10 @@ export default function App() {
                 <DetailItem label="Amount (USDC)" value={getEthers().formatUnits(invoiceData.amount, 6)} icon="dollar-sign" />
                 <DetailItem label="Issuer" value={invoiceData.issuer} isAddress={true} icon="user" />
                 <DetailItem 
-                    label="Payment Status" 
-                    value={invoiceData.paid ? "Paid" : "Not Paid"} 
-                    isPaid={invoiceData.paid}
-                    icon="check-circle"
+                    label= "Payment Status" 
+                    value= {invoiceData.paid ? "Paid" : "Not Paid"} 
+                    isPaid= {invoiceData.paid}
+                    icon= "check-circle"
                 />
                 <DetailItem label="Payer" value={invoiceData.paid ? invoiceData.payer : "-"} isAddress={true} icon="send" />
                 <DetailItem 
