@@ -221,11 +221,11 @@ export default function App() {
 
   const Modal = ({ message, onClose }) => (
       <div className="fixed inset-0 flex items-center justify-center z-50 p-4 bg-black/30 backdrop-blur-sm">
-          <div className="bg-white/20 backdrop-blur-md p-6 rounded-2xl shadow-2xl max-w-sm w-full border border-white/30 text-center">
+          <div className="bg-white/20 backdrop-blur-md p-6 rounded-3xl shadow-2xl max-w-sm w-full border border-white/30 text-center">
               <p className="text-gray-800 text-lg mb-4 font-medium">{message}</p>
               <button
                   onClick={onClose}
-                  className="w-full px-4 py-2 bg-white/30 backdrop-blur-sm text-gray-800 font-semibold rounded-xl shadow hover:scale-105 transition-all duration-200 active:scale-95"
+                  className="w-full px-4 py-2 bg-white/30 backdrop-blur-sm text-gray-800 font-semibold rounded-2xl shadow hover:scale-105 transition-all duration-200 active:scale-95"
               >
                   Close
               </button>
@@ -234,14 +234,14 @@ export default function App() {
   );
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50/20 via-white/30 to-purple-50/20 backdrop-blur-md p-4 sm:p-6 font-sans">
-      <div className="w-full max-w-3xl flex flex-col items-center">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-100 via-blue-50 to-pink-100 animate-gradient-x p-4 font-sans">
+      <div className="w-full max-w-3xl flex flex-col items-center space-y-6">
 
-        <h1 className="text-4xl font-extrabold mb-8 text-center text-gray-800 tracking-tight">
-            PayArc Invoice Registration System
+        <h1 className="text-5xl font-extrabold text-center text-gray-800 tracking-tight drop-shadow-lg">
+          PayArc Invoice Dashboard
         </h1>
 
-        <div className="w-full flex flex-col sm:flex-row justify-between items-center mb-6 bg-white/20 backdrop-blur-sm rounded-2xl shadow-2xl border border-white/30 p-4">
+        <div className="w-full flex flex-col sm:flex-row justify-between items-center p-4 rounded-3xl bg-white/20 backdrop-blur-md shadow-2xl border border-white/30">
           {!connectedAddress ? (
             <button 
                 onClick={connectWallet} 
@@ -250,28 +250,28 @@ export default function App() {
                 Connect Wallet
             </button>
           ) : (
-            <div className="text-gray-700 font-medium w-full sm:w-auto mb-2 sm:mb-0 text-center">
-                Connected: <span className="text-sm font-mono bg-white/30 backdrop-blur-sm p-1 rounded break-all">{connectedAddress}</span>
+            <div className="text-center w-full sm:w-auto text-gray-700 font-medium mb-2 sm:mb-0">
+                Connected: <span className="font-mono bg-white/30 backdrop-blur-sm p-1 rounded break-all">{connectedAddress}</span>
             </div>
           )}
-          <div className="text-gray-500 text-sm mt-2 sm:mt-0 text-center">
+          <div className="text-center text-gray-500 text-sm">
               Owner: <span className="font-mono break-all">{ownerAddress || "Loading..."}</span>
           </div>
         </div>
 
         {isOwner && (
-          <div className="w-full bg-white/20 backdrop-blur-sm p-6 rounded-2xl shadow-2xl mb-6 border border-white/30">
-            <h2 className="text-xl font-bold mb-4 text-yellow-700 border-b pb-2 border-white/30 text-center">Contract Owner Operations</h2>
-            <div className="flex flex-col sm:flex-row gap-3 mb-4 justify-center">
+          <div className="w-full bg-white/20 backdrop-blur-md p-6 rounded-3xl shadow-2xl border border-white/30 space-y-4">
+            <h2 className="text-xl font-bold mb-4 text-yellow-700 border-b pb-2 border-white/30 text-center">Owner Controls</h2>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <input 
-                  className="border border-gray-300 p-3 rounded-xl flex-1 focus:ring-green-500 focus:border-green-500" 
+                  className="border border-gray-300 p-3 rounded-2xl flex-1 focus:ring-green-500 focus:border-green-500" 
                   placeholder="Invoice ID" 
                   value={invoiceId} 
                   onChange={(e) => setInvoiceId(e.target.value)} 
                   disabled={loading}
               />
               <input 
-                  className="border border-gray-300 p-3 rounded-xl w-full sm:w-32 focus:ring-green-500 focus:border-green-500" 
+                  className="border border-gray-300 p-3 rounded-2xl w-full sm:w-32 focus:ring-green-500 focus:border-green-500" 
                   placeholder="Amount (USDC)" 
                   value={amountToCreate} 
                   onChange={(e) => setAmountToCreate(e.target.value)} 
@@ -295,16 +295,16 @@ export default function App() {
                     loading ? 'bg-gray-400 text-gray-700' : 'bg-white/20 backdrop-blur-sm text-red-600 hover:scale-105 hover:shadow-2xl'
                 }`}
             >
-                {loading ? 'Processing...' : 'Withdraw All Funds (Owner)'}
+                {loading ? 'Processing...' : 'Withdraw All Funds'}
             </button>
           </div>
         )}
 
-        <div className="w-full bg-white/20 backdrop-blur-sm p-6 rounded-2xl shadow-2xl border border-white/30">
+        <div className="w-full bg-white/20 backdrop-blur-md p-6 rounded-3xl shadow-2xl border border-white/30 space-y-4">
           <h2 className="text-xl font-bold mb-4 text-blue-700 border-b pb-2 border-white/30 text-center">Invoice Query & Payment</h2>
-          <div className="flex flex-col sm:flex-row gap-3 mb-6 justify-center">
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <input 
-                className="border border-gray-300 p-3 rounded-xl flex-1 focus:ring-blue-500 focus:border-blue-500" 
+                className="border border-gray-300 p-3 rounded-2xl flex-1 focus:ring-blue-500 focus:border-blue-500" 
                 placeholder="Invoice ID to Query / Pay" 
                 value={queryId} 
                 onChange={(e) => setQueryId(e.target.value)} 
@@ -331,7 +331,7 @@ export default function App() {
           </div>
 
           {invoiceData && (
-            <div className="mt-6 bg-white/10 backdrop-blur-sm p-6 rounded-2xl border border-white/30 shadow-inner">
+            <div className="mt-6 bg-white/10 backdrop-blur-sm p-6 rounded-3xl border border-white/30 shadow-inner">
               <h3 className="text-lg font-bold mb-3 text-blue-800 text-center">Invoice Details (ID: {queryId})</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
                 <DetailItem label="Amount (USDC)" value={getEthers().formatUnits(invoiceData.amount, 6)} />
@@ -350,8 +350,9 @@ export default function App() {
             </div>
           )}
         </div>
+
       </div>
-      
+
       {modalMessage && <Modal message={modalMessage} onClose={hideModal} />}
     </div>
   );
